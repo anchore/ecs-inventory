@@ -1,7 +1,7 @@
 package main
 
-import "fmt"
+import "github.com/anchore/elastic-container-gatherer/cmd"
 
 func main() {
-	fmt.Println("ECG")
+	cmd.Execute()
 }
