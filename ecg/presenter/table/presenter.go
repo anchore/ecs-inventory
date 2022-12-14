@@ -26,11 +26,11 @@ func NewPresenter(report inventory.Report) *Presenter {
 func (pres *Presenter) Present(output io.Writer) error {
 	rows := make([][]string, 0)
 
-	columns := []string{"Image Tag", "Repo Digest", "Namespace"}
+	columns := []string{"Image Tag", "Repo Digest", "Cluster"}
 	for _, n := range pres.report.Results {
-		namespace := n.Namespace
+		cluster := n.Cluster
 		for _, image := range n.Images {
-			row := []string{image.Tag, image.RepoDigest, namespace}
+			row := []string{image.Tag, image.RepoDigest, cluster}
 			rows = append(rows, row)
 		}
 	}

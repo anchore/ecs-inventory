@@ -106,9 +106,6 @@ func setNonCliDefaultValues(v *viper.Viper) {
 	v.SetDefault("ignore-not-running", true)
 	v.SetDefault("missing-tag-policy.policy", "digest")
 	v.SetDefault("missing-tag-policy.tag", "UNKNOWN")
-	v.SetDefault("namespaces", []string{})
-	v.SetDefault("namespace-selectors.include", []string{})
-	v.SetDefault("namespace-selectors.exclude", []string{})
 }
 
 // Load the Application Configuration from the Viper specifications

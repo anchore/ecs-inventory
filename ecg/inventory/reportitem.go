@@ -4,10 +4,10 @@ import (
 	"fmt"
 )
 
-// ReportItem represents a namespace and all it's unique images
+// ReportItem represents a cluster and all it's unique images
 type ReportItem struct {
-	Namespace string        `json:"namespace,omitempty"`
-	Images    []ReportImage `json:"images"`
+	Cluster string        `json:"cluster,omitempty"`
+	Images  []ReportImage `json:"images"`
 }
 
 // ReportImage represents a unique image in a cluster
@@ -18,7 +18,7 @@ type ReportImage struct {
 
 // String represent the ReportItem as a string
 func (r *ReportItem) String() string {
-	return fmt.Sprintf("ReportItem(namespace=%s, images=%v)", r.Namespace, r.Images)
+	return fmt.Sprintf("ReportItem(cluster=%s, images=%v)", r.Cluster, r.Images)
 }
 
 // key will return a unique key for a ReportImage

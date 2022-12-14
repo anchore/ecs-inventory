@@ -56,7 +56,7 @@ func PeriodicallyGetInventoryReport(cfg *config.Application) {
 	}
 }
 
-// GetInventoryReport is an atomic method for getting in-use image results, in parallel for multiple namespaces
+// GetInventoryReport is an atomic method for getting in-use image results, in parallel for multiple clusters
 func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
 	return inventory.Report{
 		Timestamp:     time.Now().UTC().Format(time.RFC3339),
