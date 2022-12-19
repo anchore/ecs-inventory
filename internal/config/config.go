@@ -21,7 +21,6 @@ import (
 	"github.com/anchore/elastic-container-gatherer/ecg/presenter"
 	"github.com/anchore/elastic-container-gatherer/internal"
 	"github.com/mitchellh/go-homedir"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
 	"path"
@@ -41,7 +40,6 @@ type Application struct {
 	ConfigPath             string
 	PresenterOpt           presenter.Option
 	Output                 string  `mapstructure:"output"`
-	Quiet                  bool    `mapstructure:"quiet"`
 	Log                    Logging `mapstructure:"log"`
 	CliOptions             CliOnlyOptions
 	Dev                    Development    `mapstructure:"dev"`
@@ -77,8 +75,6 @@ type HTTPConfig struct {
 
 // Logging Configuration
 type Logging struct {
-	Structured   bool `mapstructure:"structured"`
-	LevelOpt     logrus.Level
 	Level        string `mapstructure:"level"`
 	FileLocation string `mapstructure:"file"`
 }
@@ -86,6 +82,7 @@ type Logging struct {
 // Development Configuration (only profile-cpu at the moment)
 type Development struct {
 	ProfileCPU bool `mapstructure:"profile-cpu"`
+	Log        bool `mapstructure:"log"`
 }
 
 // Return whether or not AnchoreDetails are specified
@@ -96,10 +93,10 @@ func (anchore *AnchoreInfo) IsValid() bool {
 }
 
 func setNonCliDefaultValues(v *viper.Viper) {
-	v.SetDefault("log.level", "")
+	v.SetDefault("log.level", "info")
 	v.SetDefault("log.file", "")
-	v.SetDefault("log.structured", false)
 	v.SetDefault("dev.profile-cpu", false)
+	v.SetDefault("dev.log", false)
 	v.SetDefault("anchore.account", "admin")
 	v.SetDefault("anchore.http.insecure", false)
 	v.SetDefault("anchore.http.timeout-seconds", 10)
@@ -146,36 +143,6 @@ func (cfg *Application) Build() error {
 
 	runMode := mode.ParseMode(cfg.Mode)
 	cfg.RunMode = runMode
-
-	if cfg.Quiet {
-		// TODO: this is bad: quiet option trumps all other logging options
-		// we should be able to quiet the console logging and leave file logging alone...
-		// ... this will be an enhancement for later
-		cfg.Log.LevelOpt = logrus.PanicLevel
-	} else {
-		if cfg.Log.Level != "" {
-			if cfg.CliOptions.Verbosity > 0 {
-				return fmt.Errorf("cannot explicitly set log level (cfg file or env var) and use -v flag together")
-			}
-
-			lvl, err := logrus.ParseLevel(strings.ToLower(cfg.Log.Level))
-			if err != nil {
-				return fmt.Errorf("bad log level configured (%q): %w", cfg.Log.Level, err)
-			}
-			// set the log level explicitly
-			cfg.Log.LevelOpt = lvl
-		} else {
-			// set the log level implicitly
-			switch v := cfg.CliOptions.Verbosity; {
-			case v == 1:
-				cfg.Log.LevelOpt = logrus.InfoLevel
-			case v >= 2:
-				cfg.Log.LevelOpt = logrus.DebugLevel
-			default:
-				cfg.Log.LevelOpt = logrus.ErrorLevel
-			}
-		}
-	}
 
 	// add new policies here if we decide to support more
 	policies := []string{"digest", "insert", "drop"}

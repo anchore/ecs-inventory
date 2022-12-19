@@ -1,11 +1,8 @@
-// Defines the logging interface available to the application code
 package logger
 
 type Logger interface {
-	Errorf(format string, args ...interface{})
-	Warnf(format string, args ...interface{})
-	Infof(format string, args ...interface{})
-	Info(args ...interface{})
-	Debugf(format string, args ...interface{})
-	Debug(args ...interface{})
+	Error(msg string, err error, args ...interface{})
+	Warn(msg string, args ...interface{})
+	Info(msg string, args ...interface{})
+	Debug(msg string, args ...interface{})
 }

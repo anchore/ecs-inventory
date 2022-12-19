@@ -10,16 +10,11 @@ import (
 	"github.com/anchore/elastic-container-gatherer/ecg/presenter"
 	"github.com/anchore/elastic-container-gatherer/ecg/reporter"
 	"github.com/anchore/elastic-container-gatherer/internal/config"
-	"github.com/anchore/elastic-container-gatherer/internal/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 )
 
-type channels struct {
-	reportItem chan inventory.ReportItem
-	errors     chan error
-	stopper    chan struct{}
-}
+var log logger.Logger
 
 func HandleReport(report inventory.Report, cfg *config.Application) error {
 	if cfg.AnchoreDetails.IsValid() {
@@ -45,16 +40,16 @@ func PeriodicallyGetInventoryReport(cfg *config.Application) {
 	for {
 		report, err := GetInventoryReport(cfg)
 		if err != nil {
-			log.Errorf("Failed to get Inventory Report: %w", err)
+			log.Error("Failed to get Inventory Report", err)
 		} else {
 			err := HandleReport(report, cfg)
 			if err != nil {
-				log.Errorf("Failed to handle Inventory Report: %w", err)
+				log.Error("Failed to handle Inventory Report", err)
 			}
 		}
 
 		// Wait at least as long as the ticker
-		log.Debugf("Start new gather: %s", <-ticker.C)
+		log.Debug("Start new gather", <-ticker.C)
 	}
 }
 
@@ -66,7 +61,7 @@ func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
 	}
 	sess, err := session.NewSession(sessConfig)
 	if err != nil {
-		log.Errorf("Failed to create AWS session: %w", err)
+		log.Error("Failed to create AWS session", err)
 	}
 
 	err = checkAWSCredentials(sess)
@@ -82,7 +77,7 @@ func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
 }
 
 func SetLogger(logger logger.Logger) {
-	log.Log = logger
+	log = logger
 }
 
 // Check if AWS are present, should be stored in ~/.aws/credentials

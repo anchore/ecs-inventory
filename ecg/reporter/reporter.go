@@ -12,7 +12,7 @@ import (
 
 	"github.com/anchore/elastic-container-gatherer/ecg/inventory"
 	"github.com/anchore/elastic-container-gatherer/internal/config"
-	"github.com/anchore/elastic-container-gatherer/internal/log"
+	"github.com/anchore/elastic-container-gatherer/internal/logger"
 )
 
 const ReportAPIPath = "v1/enterprise/inventories"
@@ -21,7 +21,7 @@ const ReportAPIPath = "v1/enterprise/inventories"
 //
 //nolint:gosec
 func Post(report inventory.Report, anchoreDetails config.AnchoreInfo, appConfig *config.Application) error {
-	log.Debug("Reporting results to Anchore")
+	logger.Log.Debug("Reporting results to Anchore")
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: anchoreDetails.HTTP.Insecure},
 	}
@@ -55,7 +55,7 @@ func Post(report inventory.Report, anchoreDetails config.AnchoreInfo, appConfig 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("failed to report data to Anchore: %+v", resp)
 	}
-	log.Debug("Successfully reported results to Anchore")
+	logger.Log.Debug("Successfully reported results to Anchore")
 	return nil
 }
 
