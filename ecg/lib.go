@@ -60,9 +60,11 @@ func PeriodicallyGetInventoryReport(cfg *config.Application) {
 
 // GetInventoryReport is an atomic method for getting in-use image results, in parallel for multiple clusters
 func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("eu-west-2")}, // TODO - make this configurable
-	)
+	sessConfig := &aws.Config{}
+	if cfg.Region != "" {
+		sessConfig.Region = aws.String(cfg.Region)
+	}
+	sess, err := session.NewSession(sessConfig)
 	if err != nil {
 		log.Errorf("Failed to create AWS session: %w", err)
 	}
