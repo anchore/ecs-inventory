@@ -28,7 +28,7 @@ func (pres *Presenter) Present(output io.Writer) error {
 
 	columns := []string{"Image Tag", "Repo Digest", "Cluster"}
 	for _, n := range pres.report.Results {
-		cluster := n.Cluster
+		cluster := n.ClusterARN
 		for _, image := range n.Images {
 			row := []string{image.Tag, image.RepoDigest, cluster}
 			rows = append(rows, row)
