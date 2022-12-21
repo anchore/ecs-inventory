@@ -77,6 +77,19 @@ func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
 		return inventory.Report{}, err
 	}
 
+	for _, cluster := range clusters {
+		log.Debug("Found cluster", *cluster)
+
+		// Fetch tasks in cluster
+		tasks, err := fetchTasksFromCluster(ecsClient, *cluster)
+		if err != nil {
+			return inventory.Report{}, err
+		}
+		for _, task := range tasks {
+			log.Debug("Found task", *task)
+		}
+	}
+
 	return inventory.Report{
 		Timestamp:     time.Now().UTC().Format(time.RFC3339),
 		Results:       []inventory.ReportItem{},
@@ -107,4 +120,17 @@ func fetchClusters(client *ecs.ECS) ([]*string, error) {
 	}
 
 	return result.ClusterArns, nil
+}
+
+func fetchTasksFromCluster(client *ecs.ECS, cluster string) ([]*string, error) {
+	input := &ecs.ListTasksInput{
+		Cluster: aws.String(cluster),
+	}
+
+	result, err := client.ListTasks(input)
+	if err != nil {
+		return nil, err
+	}
+
+	return result.TaskArns, nil
 }
