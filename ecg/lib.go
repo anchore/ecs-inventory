@@ -78,7 +78,7 @@ func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
 	}
 
 	for _, cluster := range clusters {
-		log.Debug("Found cluster", *cluster)
+		log.Debug("Found cluster", "cluster", *cluster)
 
 		// Fetch tasks in cluster
 		tasks, err := fetchTasksFromCluster(ecsClient, *cluster)
@@ -86,7 +86,7 @@ func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
 			return inventory.Report{}, err
 		}
 		for _, task := range tasks {
-			log.Debug("Found task", *task)
+			log.Debug("Found task", "task", *task)
 		}
 	}
 
