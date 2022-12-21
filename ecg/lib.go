@@ -151,20 +151,26 @@ func fetchImagesFromTasks(client *ecs.ECS, cluster string, tasks []*string) ([]i
 		return []inventory.ReportImage{}, err
 	}
 
-	images := []inventory.ReportImage{}
-	for r := range results.Tasks {
-		task := results.Tasks[r]
-		for c := range task.Containers {
-			container := task.Containers[c]
+	uniqueImages := make(map[string]inventory.ReportImage)
+
+	for _, task := range results.Tasks {
+		for _, container := range task.Containers {
 			digest := ""
 			if container.ImageDigest != nil {
 				digest = *container.ImageDigest
 			}
-			images = append(images, inventory.ReportImage{
+			uniqueName := fmt.Sprintf("%s@%s", *container.Image, digest)
+			uniqueImages[uniqueName] = inventory.ReportImage{
 				Tag:        *container.Image,
 				RepoDigest: digest,
-			})
+			}
 		}
+	}
+
+	// convert map of unique images to a slice
+	images := []inventory.ReportImage{}
+	for _, image := range uniqueImages {
+		images = append(images, image)
 	}
 
 	return images, nil
