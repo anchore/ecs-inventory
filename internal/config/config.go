@@ -93,7 +93,7 @@ func (anchore *AnchoreInfo) IsValid() bool {
 }
 
 func setNonCliDefaultValues(v *viper.Viper) {
-	v.SetDefault("log.level", "info")
+	v.SetDefault("log.level", "")
 	v.SetDefault("log.file", "")
 	v.SetDefault("dev.profile-cpu", false)
 	v.SetDefault("dev.log", false)
@@ -143,6 +143,21 @@ func (cfg *Application) Build() error {
 
 	runMode := mode.ParseMode(cfg.Mode)
 	cfg.RunMode = runMode
+
+	if cfg.Log.Level != "" {
+		if cfg.CliOptions.Verbosity > 0 {
+			return fmt.Errorf("cannot explicitly set log level (cfg file or env var) and use -v flag together")
+		}
+	} else {
+		switch v := cfg.CliOptions.Verbosity; {
+		case v == 1:
+			cfg.Log.Level = "info"
+		case v >= 2:
+			cfg.Log.Level = "debug"
+		default:
+			cfg.Log.Level = "error"
+		}
+	}
 
 	// add new policies here if we decide to support more
 	policies := []string{"digest", "insert", "drop"}
