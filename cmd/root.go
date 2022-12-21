@@ -5,9 +5,8 @@ import (
 	"os"
 	"runtime/pprof"
 
-	"github.com/anchore/elastic-container-gatherer/ecg/mode"
-
 	"github.com/anchore/elastic-container-gatherer/ecg"
+	"github.com/anchore/elastic-container-gatherer/ecg/mode"
 	"github.com/anchore/elastic-container-gatherer/ecg/presenter"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -23,11 +22,11 @@ var rootCmd = &cobra.Command{
 		if appConfig.Dev.ProfileCPU {
 			f, err := os.Create("cpu.profile")
 			if err != nil {
-				log.Errorf("unable to create CPU profile: %+v", err)
+				log.Error("unable to create CPU profile", err)
 			} else {
 				err := pprof.StartCPUProfile(f)
 				if err != nil {
-					log.Errorf("unable to start CPU profile: %+v", err)
+					log.Error("unable to start CPU profile", err)
 				}
 			}
 		}
@@ -35,7 +34,7 @@ var rootCmd = &cobra.Command{
 		if len(args) > 0 {
 			err := cmd.Help()
 			if err != nil {
-				log.Errorf(err.Error())
+				log.Error("error running help command", err)
 				os.Exit(1)
 			}
 			os.Exit(1)
@@ -48,7 +47,7 @@ var rootCmd = &cobra.Command{
 		//}
 		//err := reporter.Post(dummyReport, appConfig.AnchoreDetails, appConfig)
 		//if err != nil {
-		//log.Errorf("Failed to validate connection to Anchore: %+v", err)
+		//log.Error("Failed to validate connection to Anchore", err)
 		//}
 		//} else {
 		//log.Debug("Anchore details not specified, will not report inventory")
@@ -63,12 +62,12 @@ var rootCmd = &cobra.Command{
 				pprof.StopCPUProfile()
 			}
 			if err != nil {
-				log.Errorf("Failed to get Image Results: %+v", err)
+				log.Error("Failed to get Image Results", err)
 				os.Exit(1)
 			} else {
 				err := ecg.HandleReport(report, appConfig)
 				if err != nil {
-					log.Errorf("Failed to handle Image Results: %+v", err)
+					log.Error("Failed to handle Image Results", err)
 					os.Exit(1)
 				}
 			}

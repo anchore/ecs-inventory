@@ -7,14 +7,13 @@ import (
 	"github.com/anchore/elastic-container-gatherer/ecg"
 	"github.com/anchore/elastic-container-gatherer/internal/config"
 	"github.com/anchore/elastic-container-gatherer/internal/logger"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var appConfig *config.Application
-var log *logrus.Logger
 var cliOnlyOpts config.CliOnlyOptions
+var log logger.Logger
 
 func init() {
 	setGlobalCliOptions()
@@ -64,19 +63,17 @@ func GetAppConfig() *config.Application {
 }
 
 func initLogging() {
-	cfg := logger.LogrusConfig{
-		EnableConsole: (appConfig.Log.FileLocation == "" || appConfig.CliOptions.Verbosity > 0) && !appConfig.Quiet,
-		EnableFile:    appConfig.Log.FileLocation != "",
-		Level:         appConfig.Log.LevelOpt,
-		Structured:    appConfig.Log.Structured,
-		FileLocation:  appConfig.Log.FileLocation,
+	logConfig := logger.LogConfig{
+		Level:        appConfig.Log.Level,
+		FileLocation: appConfig.Log.FileLocation,
+		Dev:          appConfig.Dev.Log,
 	}
 
-	logWrapper := logger.NewLogrusLogger(cfg)
-	log = logWrapper.Logger
-	ecg.SetLogger(logWrapper)
+	logger.InitLogger(logConfig)
+	log = logger.Log
+	ecg.SetLogger(logger.Log)
 }
 
 func logAppConfig() {
-	log.Debugf("Application config:\n%s", appConfig)
+	log.Debug("Application config", appConfig)
 }
