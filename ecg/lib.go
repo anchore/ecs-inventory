@@ -11,6 +11,8 @@ import (
 	"github.com/anchore/elastic-container-gatherer/ecg/reporter"
 	"github.com/anchore/elastic-container-gatherer/internal/config"
 	"github.com/anchore/elastic-container-gatherer/internal/log"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 type channels struct {
@@ -58,6 +60,20 @@ func PeriodicallyGetInventoryReport(cfg *config.Application) {
 
 // GetInventoryReport is an atomic method for getting in-use image results, in parallel for multiple clusters
 func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
+	sessConfig := &aws.Config{}
+	if cfg.Region != "" {
+		sessConfig.Region = aws.String(cfg.Region)
+	}
+	sess, err := session.NewSession(sessConfig)
+	if err != nil {
+		log.Errorf("Failed to create AWS session: %w", err)
+	}
+
+	err = checkAWSCredentials(sess)
+	if err != nil {
+		return inventory.Report{}, err
+	}
+
 	return inventory.Report{
 		Timestamp:     time.Now().UTC().Format(time.RFC3339),
 		Results:       []inventory.ReportItem{},
@@ -67,4 +83,14 @@ func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
 
 func SetLogger(logger logger.Logger) {
 	log.Log = logger
+}
+
+// Check if AWS are present, should be stored in ~/.aws/credentials
+func checkAWSCredentials(sess *session.Session) error {
+	_, err := sess.Config.Credentials.Get()
+	if err != nil {
+		// TODO: Add some logs here detailing where to put the credentials
+		return fmt.Errorf("unable to get AWS credentials: %w", err)
+	}
+	return nil
 }

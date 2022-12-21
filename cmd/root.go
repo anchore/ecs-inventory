@@ -101,4 +101,11 @@ func init() {
 		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
 		os.Exit(1)
 	}
+
+	opt = "region"
+	rootCmd.Flags().StringP(opt, "r", "", "If set overrides the AWS_REGION environment variable/region specified in ECF config")
+	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
+		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
+		os.Exit(1)
+	}
 }
