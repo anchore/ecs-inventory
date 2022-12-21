@@ -6,8 +6,8 @@ import (
 
 // ReportItem represents a cluster and all it's unique images
 type ReportItem struct {
-	Cluster string        `json:"cluster,omitempty"`
-	Images  []ReportImage `json:"images"`
+	ClusterARN string        `json:"cluster_arn,omitempty"`
+	Images     []ReportImage `json:"images"`
 }
 
 // ReportImage represents a unique image in a cluster
@@ -18,7 +18,7 @@ type ReportImage struct {
 
 // String represent the ReportItem as a string
 func (r *ReportItem) String() string {
-	return fmt.Sprintf("ReportItem(cluster=%s, images=%v)", r.Cluster, r.Images)
+	return fmt.Sprintf("ReportItem(cluster=%s, images=%v)", r.ClusterARN, r.Images)
 }
 
 // key will return a unique key for a ReportImage

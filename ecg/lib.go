@@ -77,6 +77,8 @@ func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
 		return inventory.Report{}, err
 	}
 
+	results := []inventory.ReportItem{}
+
 	for _, cluster := range clusters {
 		log.Debug("Found cluster", "cluster", *cluster)
 
@@ -85,14 +87,17 @@ func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
 		if err != nil {
 			return inventory.Report{}, err
 		}
-		for _, task := range tasks {
-			log.Debug("Found task", "task", *task)
-		}
+		images, err := fetchImagesFromTasks(ecsClient, *cluster, tasks)
+
+		results = append(results, inventory.ReportItem{
+			ClusterARN: *cluster,
+			Images:     images,
+		})
 	}
 
 	return inventory.Report{
 		Timestamp:     time.Now().UTC().Format(time.RFC3339),
-		Results:       []inventory.ReportItem{},
+		Results:       results,
 		InventoryType: "ecs",
 	}, nil
 }
@@ -133,4 +138,40 @@ func fetchTasksFromCluster(client *ecs.ECS, cluster string) ([]*string, error) {
 	}
 
 	return result.TaskArns, nil
+}
+
+func fetchImagesFromTasks(client *ecs.ECS, cluster string, tasks []*string) ([]inventory.ReportImage, error) {
+	input := &ecs.DescribeTasksInput{
+		Cluster: aws.String(cluster),
+		Tasks:   tasks,
+	}
+
+	results, err := client.DescribeTasks(input)
+	if err != nil {
+		return []inventory.ReportImage{}, err
+	}
+
+	uniqueImages := make(map[string]inventory.ReportImage)
+
+	for _, task := range results.Tasks {
+		for _, container := range task.Containers {
+			digest := ""
+			if container.ImageDigest != nil {
+				digest = *container.ImageDigest
+			}
+			uniqueName := fmt.Sprintf("%s@%s", *container.Image, digest)
+			uniqueImages[uniqueName] = inventory.ReportImage{
+				Tag:        *container.Image,
+				RepoDigest: digest,
+			}
+		}
+	}
+
+	// convert map of unique images to a slice
+	images := []inventory.ReportImage{}
+	for _, image := range uniqueImages {
+		images = append(images, image)
+	}
+
+	return images, nil
 }
