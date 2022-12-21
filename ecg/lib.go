@@ -90,14 +90,15 @@ func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
 		images, err := fetchImagesFromTasks(ecsClient, *cluster, tasks)
 
 		results = append(results, inventory.ReportItem{
-			ClusterARN: *cluster,
-			Images:     images,
+			Namespace: *cluster, //NOTE The key is Namespace to match the Anchore API but it's actually the cluster ARN
+			Images:    images,
 		})
 	}
 
 	return inventory.Report{
 		Timestamp:     time.Now().UTC().Format(time.RFC3339),
 		Results:       results,
+		ClusterName:   cfg.Region, // NOTE: The key here is ClusterName to match the Anchore API but it's actually the region
 		InventoryType: "ecs",
 	}, nil
 }
