@@ -75,5 +75,5 @@ func initLogging() {
 }
 
 func logAppConfig() {
-	log.Debug("Application config", appConfig)
+	log.Debug("Application config", "config", appConfig)
 }
