@@ -95,6 +95,7 @@ func (anchore *AnchoreInfo) IsValid() bool {
 func setNonCliDefaultValues(v *viper.Viper) {
 	v.SetDefault("log.level", "")
 	v.SetDefault("log.file", "")
+	v.SetDefault("output", "json")
 	v.SetDefault("dev.profile-cpu", false)
 	v.SetDefault("dev.log", false)
 	v.SetDefault("anchore.account", "admin")
@@ -105,7 +106,6 @@ func setNonCliDefaultValues(v *viper.Viper) {
 	v.SetDefault("missing-tag-policy.tag", "UNKNOWN")
 }
 
-// Load the Application Configuration from the Viper specifications
 func LoadConfigFromFile(v *viper.Viper, cliOpts *CliOnlyOptions) (*Application, error) {
 	// the user may not have a config, and this is OK, we can use the default config + default cobra cli values instead
 	setNonCliDefaultValues(v)
@@ -134,7 +134,6 @@ func LoadConfigFromFile(v *viper.Viper, cliOpts *CliOnlyOptions) (*Application, 
 
 // Build the configuration object (to be used as a singleton)
 func (cfg *Application) Build() error {
-	// set the presenter
 	presenterOption := presenter.ParseOption(cfg.Output)
 	if presenterOption == presenter.UnknownPresenter {
 		return fmt.Errorf("bad --output value '%s'", cfg.Output)
@@ -183,13 +182,12 @@ func readConfig(v *viper.Viper, configPath string) error {
 	// e.g. pod.context = APPNAME_POD_CONTEXT
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 
-	// use explicitly the given user config
 	if configPath != "" {
 		v.SetConfigFile(configPath)
 		if err := v.ReadInConfig(); err == nil {
 			return nil
 		}
-		// don't fall through to other options if this fails
+
 		return fmt.Errorf("unable to read config: %v", configPath)
 	}
 
