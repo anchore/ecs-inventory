@@ -20,7 +20,7 @@ const ReportAPIPath = "v1/enterprise/inventories"
 // This method does the actual Reporting (via HTTP) to Anchore
 //
 //nolint:gosec
-func Post(report inventory.Report, anchoreDetails config.AnchoreInfo, appConfig *config.Application) error {
+func Post(report inventory.Report, anchoreDetails config.AnchoreInfo, appConfig *config.AppConfig) error {
 	logger.Log.Debug("Reporting results to Anchore")
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: anchoreDetails.HTTP.Insecure},

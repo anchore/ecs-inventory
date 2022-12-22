@@ -3,11 +3,13 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/anchore/elastic-container-gatherer/ecg"
+	"github.com/anchore/elastic-container-gatherer/internal/config"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -47,14 +49,14 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	opt := "polling-interval-seconds"
-	rootCmd.Flags().StringP(opt, "p", "300", "This specifies the polling interval of the ECS API in seconds")
+	rootCmd.Flags().StringP(opt, "p", strconv.Itoa(config.DefaultConfigValues.PollingIntervalSeconds), "This specifies the polling interval of the ECS API in seconds")
 	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
 		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
 		os.Exit(1)
 	}
 
 	opt = "region"
-	rootCmd.Flags().StringP(opt, "r", "", "If set overrides the AWS_REGION environment variable/region specified in ECG config")
+	rootCmd.Flags().StringP(opt, "r", config.DefaultConfigValues.Region, "If set overrides the AWS_REGION environment variable/region specified in ECG config")
 	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
 		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
 		os.Exit(1)

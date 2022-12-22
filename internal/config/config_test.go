@@ -8,25 +8,43 @@ import (
 )
 
 func TestLoadConfigFromFileCliConfigPath(t *testing.T) {
+	t.Cleanup(cleanup)
+
 	cliOpts := CliOnlyOptions{
 		ConfigPath: "testdata/config.yaml",
 	}
-	cfg, err := LoadConfigFromFile(viper.GetViper(), &cliOpts)
+	appCfg, err := LoadConfigFromFile(viper.GetViper(), &cliOpts)
 
-	assert.Nil(t, err)
-	assert.Equal(t, "info", cfg.Log.Level)
-	assert.Equal(t, "/var/log/ecg.log", cfg.Log.FileLocation)
-	assert.Equal(t, "http://localhost:8228", cfg.AnchoreDetails.URL)
-	assert.Equal(t, "admin", cfg.AnchoreDetails.Account)
-	assert.Equal(t, "admin", cfg.AnchoreDetails.User)
-	assert.Equal(t, "foobar", cfg.AnchoreDetails.Password)
-	assert.Equal(t, false, cfg.AnchoreDetails.HTTP.Insecure)
-	assert.Equal(t, 10, cfg.AnchoreDetails.HTTP.TimeoutSeconds)
-	assert.Equal(t, "us-east-1", cfg.Region)
-	assert.Equal(t, 60, cfg.PollingIntervalSeconds)
+	assert.NoError(t, err)
+
+	expectedCfg := &AppConfig{
+		CliOptions: CliOnlyOptions{
+			ConfigPath: "testdata/config.yaml",
+		},
+		Log: Logging{
+			Level:        "info",
+			FileLocation: "/var/log/ecg.log",
+		},
+		AnchoreDetails: AnchoreInfo{
+			Account:  "admin",
+			User:     "admin",
+			Password: "foobar",
+			URL:      "http://localhost:8228",
+			HTTP: HTTPConfig{
+				Insecure:       false,
+				TimeoutSeconds: 10,
+			},
+		},
+		Region:                 "us-east-1",
+		PollingIntervalSeconds: 60,
+	}
+
+	assert.EqualValues(t, expectedCfg, appCfg)
 }
 
 func TestLoadConfigFromFileBadCliConfig(t *testing.T) {
+	t.Cleanup(cleanup)
+
 	cliOpts := CliOnlyOptions{
 		ConfigPath: "testdata/bad-config.yaml",
 	}
@@ -36,18 +54,21 @@ func TestLoadConfigFromFileBadCliConfig(t *testing.T) {
 }
 
 func TestReadConfigNoConfigsPresent(t *testing.T) {
+	t.Cleanup(cleanup)
+
 	err := readConfig(viper.GetViper(), "", "ecg-but-not-really-lets-break-this-test")
 
 	assert.Error(t, err)
-
 }
 
 func TestPasswordsAreObfuscated(t *testing.T) {
-	// setup
-	config := Application{
-		ConfigPath:             "testdata/config.yaml",
-		Log:                    Logging{},
-		CliOptions:             CliOnlyOptions{},
+	t.Cleanup(cleanup)
+
+	config := AppConfig{
+		Log: Logging{},
+		CliOptions: CliOnlyOptions{
+			ConfigPath: "testdata/config.yaml",
+		},
 		PollingIntervalSeconds: 300,
 		AnchoreDetails: AnchoreInfo{
 			URL:      "http://localhost:8228/v1",
@@ -58,12 +79,11 @@ func TestPasswordsAreObfuscated(t *testing.T) {
 		},
 	}
 
-	expected := `configpath: testdata/config.yaml
-log:
+	expected := `log:
   level: ""
   filelocation: ""
 clioptions:
-  configpath: ""
+  configpath: testdata/config.yaml
   verbosity: 0
 pollingintervalseconds: 300
 anchoredetails:
@@ -77,6 +97,58 @@ anchoredetails:
 region: ""
 `
 
-	// test
-	assert.Equal(t, config.String(), expected)
+	assert.Equal(t, expected, config.String())
+}
+
+func TestDefaultValuesSuppliedForEmptyConfig(t *testing.T) {
+	t.Cleanup(cleanup)
+
+	configPath := "testdata/empty_config.yaml"
+
+	cliOpts := CliOnlyOptions{
+		ConfigPath: configPath,
+	}
+
+	appCfg, err := LoadConfigFromFile(viper.GetViper(), &cliOpts)
+	assert.NoError(t, err)
+
+	expectedCfg := &AppConfig{
+		CliOptions: CliOnlyOptions{
+			ConfigPath: configPath,
+		},
+		Log: Logging{
+			Level: "error",
+		},
+		AnchoreDetails: AnchoreInfo{
+			Account:  "admin",
+			Password: "",
+			HTTP: HTTPConfig{
+				Insecure:       false,
+				TimeoutSeconds: 10,
+			},
+		},
+	}
+
+	assert.EqualValues(t, expectedCfg, appCfg)
+}
+
+func TestCliOptsOverrideConfigFileOpts(t *testing.T) {
+	t.Cleanup(cleanup)
+
+	expectedRegion := "eu-west-2"
+	cliOpts := CliOnlyOptions{
+		ConfigPath: "testdata/config.yaml",
+	}
+
+	viper.Set("Region", expectedRegion)
+
+	// Config file is set to "us-east-1"
+	appCfg, err := LoadConfigFromFile(viper.GetViper(), &cliOpts)
+
+	assert.NoError(t, err)
+	assert.Equal(t, expectedRegion, appCfg.Region)
+}
+
+func cleanup() {
+	viper.Reset()
 }

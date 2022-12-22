@@ -31,9 +31,7 @@ type CliOnlyOptions struct {
 	Verbosity  int
 }
 
-// All Application configurations
-type Application struct {
-	ConfigPath             string
+type AppConfig struct {
 	Log                    Logging `mapstructure:"log"`
 	CliOptions             CliOnlyOptions
 	PollingIntervalSeconds int         `mapstructure:"polling-interval-seconds"`
@@ -62,6 +60,22 @@ type Logging struct {
 	FileLocation string `mapstructure:"file"`
 }
 
+var DefaultConfigValues = AppConfig{
+	Log: Logging{
+		Level:        "",
+		FileLocation: "",
+	},
+	AnchoreDetails: AnchoreInfo{
+		Account: "admin",
+		HTTP: HTTPConfig{
+			Insecure:       false,
+			TimeoutSeconds: 10,
+		},
+	},
+	Region:                 "",
+	PollingIntervalSeconds: 300,
+}
+
 // Return whether or not AnchoreDetails are specified
 func (anchore *AnchoreInfo) IsValid() bool {
 	return anchore.URL != "" &&
@@ -69,32 +83,36 @@ func (anchore *AnchoreInfo) IsValid() bool {
 		anchore.Password != ""
 }
 
-func setNonCliDefaultValues(v *viper.Viper) {
-	v.SetDefault("log.level", "")
-	v.SetDefault("log.file", "")
-	v.SetDefault("anchore.account", "admin")
-	v.SetDefault("anchore.http.insecure", false)
-	v.SetDefault("anchore.http.timeout-seconds", 10)
+func setDefaultValues(v *viper.Viper) {
+	v.SetDefault("log.level", DefaultConfigValues.Log.Level)
+	v.SetDefault("log.file", DefaultConfigValues.Log.FileLocation)
+	v.SetDefault("anchore.account", DefaultConfigValues.AnchoreDetails.Account)
+	v.SetDefault("anchore.http.insecure", DefaultConfigValues.AnchoreDetails.HTTP.Insecure)
+	v.SetDefault("anchore.http.timeout-seconds", DefaultConfigValues.AnchoreDetails.HTTP.TimeoutSeconds)
 }
 
 // Load the Application Configuration from the Viper specifications
-func LoadConfigFromFile(v *viper.Viper, cliOpts *CliOnlyOptions) (*Application, error) {
+func LoadConfigFromFile(v *viper.Viper, cliOpts *CliOnlyOptions) (*AppConfig, error) {
 	// the user may not have a config, and this is OK, we can use the default config + default cobra cli values instead
-	setNonCliDefaultValues(v)
+	setDefaultValues(v)
+
+	cliOptsConfigPath := ""
 	if cliOpts != nil {
-		_ = readConfig(v, cliOpts.ConfigPath, internal.ApplicationName)
-	} else {
-		_ = readConfig(v, "", internal.ApplicationName)
+		cliOptsConfigPath = cliOpts.ConfigPath
 	}
 
-	config := &Application{
+	err := readConfig(v, cliOptsConfigPath, internal.ApplicationName)
+	if err != nil {
+		return nil, err
+	}
+
+	config := &AppConfig{
 		CliOptions: *cliOpts,
 	}
-	err := v.Unmarshal(config)
+	err = v.Unmarshal(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse config: %w", err)
 	}
-	config.ConfigPath = v.ConfigFileUsed()
 
 	err = config.Build()
 	if err != nil {
@@ -105,7 +123,7 @@ func LoadConfigFromFile(v *viper.Viper, cliOpts *CliOnlyOptions) (*Application, 
 }
 
 // Build the configuration object (to be used as a singleton)
-func (cfg *Application) Build() error {
+func (cfg *AppConfig) Build() error {
 	if cfg.Log.Level != "" {
 		if cfg.CliOptions.Verbosity > 0 {
 			return fmt.Errorf("cannot explicitly set log level (cfg file or env var) and use -v flag together")
@@ -131,7 +149,6 @@ func readConfig(v *viper.Viper, configPath, applicationName string) error {
 	// e.g. pod.context = APPNAME_POD_CONTEXT
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 
-	// use explicitly the given user config
 	if configPath != "" {
 		fmt.Println("using config file:", configPath)
 		v.SetConfigFile(configPath)
@@ -181,7 +198,7 @@ func readConfig(v *viper.Viper, configPath, applicationName string) error {
 	return fmt.Errorf("application config not found")
 }
 
-func (cfg Application) String() string {
+func (cfg AppConfig) String() string {
 	// redact sensitive information
 	// Note: If the configuration grows to have more redacted fields it would be good to refactor this into something that
 	// is more dynamic based on a property or list of "sensitive" fields

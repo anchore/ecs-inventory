@@ -12,7 +12,7 @@ import (
 	"github.com/anchore/elastic-container-gatherer/internal/logger"
 )
 
-var appConfig *config.Application
+var appConfig *config.AppConfig
 var cliOnlyOpts config.CliOnlyOptions
 var log logger.Logger
 
@@ -47,7 +47,7 @@ func InitAppConfig() {
 	appConfig = cfg
 }
 
-func GetAppConfig() *config.Application {
+func GetAppConfig() *config.AppConfig {
 	return appConfig
 }
 
