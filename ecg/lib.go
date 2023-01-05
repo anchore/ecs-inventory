@@ -50,7 +50,7 @@ func PeriodicallyGetInventoryReport(cfg *config.Application) {
 		}
 
 		// Wait at least as long as the ticker
-		log.Debug("Start new gather", <-ticker.C)
+		log.Debugf("Start new gather %s", <-ticker.C)
 	}
 }
 
