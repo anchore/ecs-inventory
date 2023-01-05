@@ -100,7 +100,7 @@ func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
 		images, err := fetchImagesFromTasks(ecsClient, *cluster, tasks)
 
 		results = append(results, inventory.ReportItem{
-			Namespace: *cluster, //NOTE The key is Namespace to match the Anchore API but it's actually the cluster ARN
+			Namespace: *cluster, // NOTE The key is Namespace to match the Anchore API but it's actually the cluster ARN
 			Images:    images,
 		})
 	}
