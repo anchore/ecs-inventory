@@ -20,8 +20,3 @@ type ReportImage struct {
 func (r *ReportItem) String() string {
 	return fmt.Sprintf("ReportItem(cluster=%s, images=%v)", r.Namespace, r.Images)
 }
-
-// key will return a unique key for a ReportImage
-func (i *ReportImage) key() string {
-	return fmt.Sprintf("%s@%s", i.Tag, i.RepoDigest)
-}
