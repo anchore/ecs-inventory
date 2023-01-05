@@ -15,8 +15,6 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/anchore/elastic-container-gatherer/ecg/mode"
-
 	"github.com/adrg/xdg"
 	"github.com/anchore/elastic-container-gatherer/ecg/presenter"
 	"github.com/anchore/elastic-container-gatherer/internal"
@@ -42,14 +40,11 @@ type Application struct {
 	Output                 string  `mapstructure:"output"`
 	Log                    Logging `mapstructure:"log"`
 	CliOptions             CliOnlyOptions
-	Dev                    Development    `mapstructure:"dev"`
 	MissingTagPolicy       MissingTagConf `mapstructure:"missing-tag-policy"`
-	RunMode                mode.Mode
-	Mode                   string      `mapstructure:"mode"`
-	IgnoreNotRunning       bool        `mapstructure:"ignore-not-running"`
-	PollingIntervalSeconds int         `mapstructure:"polling-interval-seconds"`
-	AnchoreDetails         AnchoreInfo `mapstructure:"anchore"`
-	Region                 string      `mapstructure:"region"`
+	IgnoreNotRunning       bool           `mapstructure:"ignore-not-running"`
+	PollingIntervalSeconds int            `mapstructure:"polling-interval-seconds"`
+	AnchoreDetails         AnchoreInfo    `mapstructure:"anchore"`
+	Region                 string         `mapstructure:"region"`
 }
 
 // MissingTagConf details the policy for handling missing tags when reporting images
@@ -79,11 +74,6 @@ type Logging struct {
 	FileLocation string `mapstructure:"file"`
 }
 
-// Development Configuration (only profile-cpu at the moment)
-type Development struct {
-	ProfileCPU bool `mapstructure:"profile-cpu"`
-}
-
 // Return whether or not AnchoreDetails are specified
 func (anchore *AnchoreInfo) IsValid() bool {
 	return anchore.URL != "" &&
@@ -94,8 +84,6 @@ func (anchore *AnchoreInfo) IsValid() bool {
 func setNonCliDefaultValues(v *viper.Viper) {
 	v.SetDefault("log.level", "")
 	v.SetDefault("log.file", "")
-	v.SetDefault("dev.profile-cpu", false)
-	v.SetDefault("dev.log", false)
 	v.SetDefault("anchore.account", "admin")
 	v.SetDefault("anchore.http.insecure", false)
 	v.SetDefault("anchore.http.timeout-seconds", 10)
@@ -139,9 +127,6 @@ func (cfg *Application) Build() error {
 		return fmt.Errorf("bad --output value '%s'", cfg.Output)
 	}
 	cfg.PresenterOpt = presenterOption
-
-	runMode := mode.ParseMode(cfg.Mode)
-	cfg.RunMode = runMode
 
 	if cfg.Log.Level != "" {
 		if cfg.CliOptions.Verbosity > 0 {

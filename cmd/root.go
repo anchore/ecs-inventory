@@ -3,10 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"runtime/pprof"
 
 	"github.com/anchore/elastic-container-gatherer/ecg"
-	"github.com/anchore/elastic-container-gatherer/ecg/mode"
 	"github.com/anchore/elastic-container-gatherer/ecg/presenter"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -19,18 +17,6 @@ var rootCmd = &cobra.Command{
 	Long:  "ECG (Elastic Container Gatherer) can poll Amazon ECS (Elastic Container Service) APIs to tell Anchore which Images are currently in-use",
 	Args:  cobra.MaximumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		if appConfig.Dev.ProfileCPU {
-			f, err := os.Create("cpu.profile")
-			if err != nil {
-				log.Error("unable to create CPU profile", err)
-			} else {
-				err := pprof.StartCPUProfile(f)
-				if err != nil {
-					log.Error("unable to start CPU profile", err)
-				}
-			}
-		}
-
 		if len(args) > 0 {
 			err := cmd.Help()
 			if err != nil {
@@ -53,25 +39,7 @@ var rootCmd = &cobra.Command{
 		//log.Debug("Anchore details not specified, will not report inventory")
 		//}
 
-		switch appConfig.RunMode {
-		case mode.PeriodicPolling:
-			ecg.PeriodicallyGetInventoryReport(appConfig)
-		default:
-			report, err := ecg.GetInventoryReport(appConfig)
-			if appConfig.Dev.ProfileCPU {
-				pprof.StopCPUProfile()
-			}
-			if err != nil {
-				log.Error("Failed to get Image Results", err)
-				os.Exit(1)
-			} else {
-				err := ecg.HandleReport(report, appConfig)
-				if err != nil {
-					log.Error("Failed to handle Image Results", err)
-					os.Exit(1)
-				}
-			}
-		}
+		ecg.PeriodicallyGetInventoryReport(appConfig)
 	},
 }
 
@@ -87,15 +55,8 @@ func init() {
 		os.Exit(1)
 	}
 
-	opt = "mode"
-	rootCmd.Flags().StringP(opt, "m", mode.AdHoc.String(), fmt.Sprintf("execution mode, options=%v", mode.Modes))
-	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
-		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
-		os.Exit(1)
-	}
-
 	opt = "polling-interval-seconds"
-	rootCmd.Flags().StringP(opt, "p", "300", "If mode is 'periodic', this specifies the interval")
+	rootCmd.Flags().StringP(opt, "p", "300", "This specifies the polling interval of the ECS API in seconds")
 	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
 		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
 		os.Exit(1)
