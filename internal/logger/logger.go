@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 type Logger struct {
@@ -43,7 +42,7 @@ func InitLogger(logConfig LogConfig) {
 
 	if err != nil {
 		log.Printf("Invalid log level: %s, defaulting to `info`", logConfig.Level)
-		level = zap.NewAtomicLevelAt(zapcore.InfoLevel)
+		level = zap.NewAtomicLevelAt(zap.InfoLevel)
 	}
 
 	if logConfig.FileLocation != "" {
