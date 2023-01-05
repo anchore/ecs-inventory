@@ -32,7 +32,6 @@ func (log Logger) Error(msg string, err error, args ...interface{}) {
 type LogConfig struct {
 	Level        string
 	FileLocation string
-	Dev          bool
 }
 
 var Log Logger
@@ -47,30 +46,23 @@ func InitLogger(logConfig LogConfig) {
 		level = zap.NewAtomicLevelAt(zapcore.InfoLevel)
 	}
 
-	if logConfig.Dev {
+	if logConfig.FileLocation != "" {
+		cfg = zap.Config{
+			Level:         level,
+			Encoding:      "json",
+			EncoderConfig: zap.NewProductionEncoderConfig(),
+			OutputPaths:   []string{logConfig.FileLocation},
+		}
+	} else {
+		zapEncoderCfg := zap.NewProductionEncoderConfig()
+		zapEncoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+
 		cfg = zap.Config{
 			Level:            level,
 			Encoding:         "console",
-			EncoderConfig:    zap.NewDevelopmentEncoderConfig(),
+			EncoderConfig:    zapEncoderCfg,
 			OutputPaths:      []string{"stdout"},
 			ErrorOutputPaths: []string{"stderr"},
-		}
-	} else {
-		if logConfig.FileLocation != "" {
-			cfg = zap.Config{
-				Level:         level,
-				Encoding:      "json",
-				EncoderConfig: zap.NewProductionEncoderConfig(),
-				OutputPaths:   []string{logConfig.FileLocation},
-			}
-		} else {
-			cfg = zap.Config{
-				Level:            level,
-				Encoding:         "console",
-				EncoderConfig:    zap.NewProductionEncoderConfig(),
-				OutputPaths:      []string{"stdout"},
-				ErrorOutputPaths: []string{"stderr"},
-			}
 		}
 	}
 

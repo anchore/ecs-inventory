@@ -82,7 +82,6 @@ type Logging struct {
 // Development Configuration (only profile-cpu at the moment)
 type Development struct {
 	ProfileCPU bool `mapstructure:"profile-cpu"`
-	Log        bool `mapstructure:"log"`
 }
 
 // Return whether or not AnchoreDetails are specified
