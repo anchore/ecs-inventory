@@ -23,9 +23,8 @@ version     show the version
 Flags:
 -c, --config string                     application config file
 -h, --help                              help for ecg
--m, --mode string                       execution mode, options=[adhoc periodic] (default "adhoc")
 -o, --output string                     report output formatter, options=[json table] (default "json")
--p, --polling-interval-seconds string   If mode is 'periodic', this specifies the interval (default "300")
+-p, --polling-interval-seconds string   This specifies the polling interval of the ECS API in seconds (default "300")
 -r, --region string                     If set overrides the AWS_REGION environment variable/region specified in ECG config
 -v, --verbose count                     increase verbosity (-v = info, -vv = debug)
 

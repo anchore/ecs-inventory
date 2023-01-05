@@ -15,8 +15,6 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/anchore/elastic-container-gatherer/ecg/mode"
-
 	"github.com/adrg/xdg"
 	"github.com/anchore/elastic-container-gatherer/ecg/presenter"
 	"github.com/anchore/elastic-container-gatherer/internal"
@@ -43,12 +41,10 @@ type Application struct {
 	Log                    Logging `mapstructure:"log"`
 	CliOptions             CliOnlyOptions
 	MissingTagPolicy       MissingTagConf `mapstructure:"missing-tag-policy"`
-	RunMode                mode.Mode
-	Mode                   string      `mapstructure:"mode"`
-	IgnoreNotRunning       bool        `mapstructure:"ignore-not-running"`
-	PollingIntervalSeconds int         `mapstructure:"polling-interval-seconds"`
-	AnchoreDetails         AnchoreInfo `mapstructure:"anchore"`
-	Region                 string      `mapstructure:"region"`
+	IgnoreNotRunning       bool           `mapstructure:"ignore-not-running"`
+	PollingIntervalSeconds int            `mapstructure:"polling-interval-seconds"`
+	AnchoreDetails         AnchoreInfo    `mapstructure:"anchore"`
+	Region                 string         `mapstructure:"region"`
 }
 
 // MissingTagConf details the policy for handling missing tags when reporting images
@@ -131,9 +127,6 @@ func (cfg *Application) Build() error {
 		return fmt.Errorf("bad --output value '%s'", cfg.Output)
 	}
 	cfg.PresenterOpt = presenterOption
-
-	runMode := mode.ParseMode(cfg.Mode)
-	cfg.RunMode = runMode
 
 	if cfg.Log.Level != "" {
 		if cfg.CliOptions.Verbosity > 0 {
