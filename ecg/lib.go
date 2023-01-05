@@ -98,9 +98,16 @@ func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
 		if err != nil {
 			return inventory.Report{}, err
 		}
-		images, err := fetchImagesFromTasks(ecsClient, *cluster, tasks)
-		if err != nil {
-			return inventory.Report{}, err
+
+		images := []inventory.ReportImage{}
+		// Must be at least one task to continue
+		if len(tasks) == 0 {
+			log.Debug("No tasks found in cluster", "cluster", *cluster)
+		} else {
+			images, err = fetchImagesFromTasks(ecsClient, *cluster, tasks)
+			if err != nil {
+				return inventory.Report{}, err
+			}
 		}
 
 		results = append(results, inventory.ReportItem{
