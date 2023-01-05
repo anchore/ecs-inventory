@@ -6,13 +6,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecs"
+
 	"github.com/anchore/elastic-container-gatherer/ecg/inventory"
 	"github.com/anchore/elastic-container-gatherer/ecg/logger"
 	"github.com/anchore/elastic-container-gatherer/ecg/reporter"
 	"github.com/anchore/elastic-container-gatherer/internal/config"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 var log logger.Logger

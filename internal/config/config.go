@@ -12,16 +12,15 @@ package config
 
 import (
 	"fmt"
-
-	"gopkg.in/yaml.v2"
-
-	"github.com/adrg/xdg"
-	"github.com/anchore/elastic-container-gatherer/internal"
-	"github.com/mitchellh/go-homedir"
-	"github.com/spf13/viper"
-
 	"path"
 	"strings"
+
+	"github.com/adrg/xdg"
+	"github.com/mitchellh/go-homedir"
+	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
+
+	"github.com/anchore/elastic-container-gatherer/internal"
 )
 
 const redacted = "******"

@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/anchore/elastic-container-gatherer/ecg"
 	"github.com/anchore/elastic-container-gatherer/internal/config"
 	"github.com/anchore/elastic-container-gatherer/internal/logger"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var appConfig *config.Application

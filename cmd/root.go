@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/anchore/elastic-container-gatherer/ecg"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/anchore/elastic-container-gatherer/ecg"
 )
 
 // rootCmd represents the base command when called without any subcommands
