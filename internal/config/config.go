@@ -16,7 +16,6 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/adrg/xdg"
-	"github.com/anchore/elastic-container-gatherer/ecg/presenter"
 	"github.com/anchore/elastic-container-gatherer/internal"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
@@ -36,8 +35,6 @@ type CliOnlyOptions struct {
 // All Application configurations
 type Application struct {
 	ConfigPath             string
-	PresenterOpt           presenter.Option
-	Output                 string  `mapstructure:"output"`
 	Log                    Logging `mapstructure:"log"`
 	CliOptions             CliOnlyOptions
 	MissingTagPolicy       MissingTagConf `mapstructure:"missing-tag-policy"`
@@ -121,13 +118,6 @@ func LoadConfigFromFile(v *viper.Viper, cliOpts *CliOnlyOptions) (*Application, 
 
 // Build the configuration object (to be used as a singleton)
 func (cfg *Application) Build() error {
-	// set the presenter
-	presenterOption := presenter.ParseOption(cfg.Output)
-	if presenterOption == presenter.UnknownPresenter {
-		return fmt.Errorf("bad --output value '%s'", cfg.Output)
-	}
-	cfg.PresenterOpt = presenterOption
-
 	if cfg.Log.Level != "" {
 		if cfg.CliOptions.Verbosity > 0 {
 			return fmt.Errorf("cannot explicitly set log level (cfg file or env var) and use -v flag together")

@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/anchore/elastic-container-gatherer/ecg"
-	"github.com/anchore/elastic-container-gatherer/ecg/presenter"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -44,18 +43,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	// output & formatting options
-	opt := "output"
-	rootCmd.Flags().StringP(
-		opt, "o", presenter.JSONPresenter.String(),
-		fmt.Sprintf("report output formatter, options=%v", presenter.Options),
-	)
-	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
-		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
-		os.Exit(1)
-	}
-
-	opt = "polling-interval-seconds"
+	opt := "polling-interval-seconds"
 	rootCmd.Flags().StringP(opt, "p", "300", "This specifies the polling interval of the ECS API in seconds")
 	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
 		fmt.Printf("unable to bind flag '%s': %+v", opt, err)

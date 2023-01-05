@@ -1,13 +1,13 @@
 package ecg
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/anchore/elastic-container-gatherer/ecg/inventory"
 	"github.com/anchore/elastic-container-gatherer/ecg/logger"
-	"github.com/anchore/elastic-container-gatherer/ecg/presenter"
 	"github.com/anchore/elastic-container-gatherer/ecg/reporter"
 	"github.com/anchore/elastic-container-gatherer/internal/config"
 	"github.com/aws/aws-sdk-go/aws"
@@ -16,6 +16,18 @@ import (
 )
 
 var log logger.Logger
+
+// Output the JSON formatted report to stdout
+func reportToStdout(report inventory.Report) error {
+	enc := json.NewEncoder(os.Stdout)
+	// prevent > and < from being escaped in the payload
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", " ")
+	if err := enc.Encode(report); err != nil {
+		return fmt.Errorf("unable to show inventory: %w", err)
+	}
+	return nil
+}
 
 func HandleReport(report inventory.Report, cfg *config.Application) error {
 	if cfg.AnchoreDetails.IsValid() {
@@ -26,10 +38,8 @@ func HandleReport(report inventory.Report, cfg *config.Application) error {
 		log.Debug("Anchore details not specified, not reporting inventory")
 	}
 
-	if err := presenter.GetPresenter(cfg.PresenterOpt, report).Present(os.Stdout); err != nil {
-		return fmt.Errorf("unable to show inventory: %w", err)
-	}
-	return nil
+	// Encode the report to JSON and output to stdout (maintains same behaviour as when multiple presenters were supported)
+	return reportToStdout(report)
 }
 
 // PeriodicallyGetInventoryReport periodically retrieve image results and report/output them according to the configuration.
