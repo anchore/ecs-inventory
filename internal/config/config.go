@@ -36,7 +36,6 @@ type Application struct {
 	ConfigPath             string
 	Log                    Logging `mapstructure:"log"`
 	CliOptions             CliOnlyOptions
-	IgnoreNotRunning       bool        `mapstructure:"ignore-not-running"`
 	PollingIntervalSeconds int         `mapstructure:"polling-interval-seconds"`
 	AnchoreDetails         AnchoreInfo `mapstructure:"anchore"`
 	Region                 string      `mapstructure:"region"`
@@ -76,7 +75,6 @@ func setNonCliDefaultValues(v *viper.Viper) {
 	v.SetDefault("anchore.account", "admin")
 	v.SetDefault("anchore.http.insecure", false)
 	v.SetDefault("anchore.http.timeout-seconds", 10)
-	v.SetDefault("ignore-not-running", true)
 }
 
 // Load the Application Configuration from the Viper specifications
