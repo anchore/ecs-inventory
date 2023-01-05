@@ -15,6 +15,10 @@ func (log Logger) Debug(msg string, args ...interface{}) {
 	log.zap.Debugw(msg, args...)
 }
 
+func (log Logger) Debugf(msg string, args ...interface{}) {
+	log.zap.Debugf(msg, args...)
+}
+
 func (log Logger) Info(msg string, args ...interface{}) {
 	log.zap.Infow(msg, args...)
 }
