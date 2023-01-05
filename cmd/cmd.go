@@ -54,7 +54,6 @@ func initLogging() {
 	logConfig := logger.LogConfig{
 		Level:        appConfig.Log.Level,
 		FileLocation: appConfig.Log.FileLocation,
-		Dev:          appConfig.Dev.Log,
 	}
 
 	logger.InitLogger(logConfig)
