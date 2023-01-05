@@ -1,12 +1,19 @@
 TEMPDIR = ./.tmp
+RESULTSDIR = $(TEMPDIR)/results
 LINTCMD = $(TEMPDIR)/golangci-lint run --tests=false --timeout 5m --config .golangci.yaml
 GOIMPORTS_CMD = $(TEMPDIR)/gosimports -local github.com/anchore
 VERSION=$(shell git describe --dirty --always --tags)
+
+# the quality gate lower threshold for unit test total % coverage (by function statements)
+COVERAGE_THRESHOLD := 50
+COVER_REPORT = $(RESULTSDIR)/cover.report
+COVER_TOTAL = $(RESULTSDIR)/cover.total
 
 # formatting variables
 BOLD := $(shell tput -T linux bold)
 PURPLE := $(shell tput -T linux setaf 5)
 GREEN := $(shell tput -T linux setaf 2)
+RED := $(shell tput -T linux setaf 1)
 RESET := $(shell tput -T linux sgr0)
 TITLE := $(BOLD)$(PURPLE)
 SUCCESS := $(BOLD)$(GREEN)
@@ -79,3 +86,12 @@ lint-fix: ## Auto-format all source code + run golangci lint fixers
 	$(GOIMPORTS_CMD) -w .
 	$(LINTCMD) --fix
 	go mod tidy
+
+.PHONY: unit
+unit: ## Run unit tests (with coverage)
+	$(call title,Running unit tests)
+	mkdir -p $(RESULTSDIR)
+	go test -coverprofile $(COVER_REPORT) `go list ./... | grep -v test`
+	@go tool cover -func $(COVER_REPORT) | grep total |  awk '{print substr($$3, 1, length($$3)-1)}' > $(COVER_TOTAL)
+	@echo "Coverage: $$(cat $(COVER_TOTAL))"
+	@if [ $$(echo "$$(cat $(COVER_TOTAL)) >= $(COVERAGE_THRESHOLD)" | bc -l) -ne 1 ]; then echo "$(RED)$(BOLD)Failed coverage quality gate (> $(COVERAGE_THRESHOLD)%)$(RESET)" && false; fi
