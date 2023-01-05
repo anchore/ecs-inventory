@@ -42,7 +42,6 @@ type Application struct {
 	Output                 string  `mapstructure:"output"`
 	Log                    Logging `mapstructure:"log"`
 	CliOptions             CliOnlyOptions
-	Dev                    Development    `mapstructure:"dev"`
 	MissingTagPolicy       MissingTagConf `mapstructure:"missing-tag-policy"`
 	RunMode                mode.Mode
 	Mode                   string      `mapstructure:"mode"`
@@ -79,11 +78,6 @@ type Logging struct {
 	FileLocation string `mapstructure:"file"`
 }
 
-// Development Configuration (only profile-cpu at the moment)
-type Development struct {
-	ProfileCPU bool `mapstructure:"profile-cpu"`
-}
-
 // Return whether or not AnchoreDetails are specified
 func (anchore *AnchoreInfo) IsValid() bool {
 	return anchore.URL != "" &&
@@ -94,8 +88,6 @@ func (anchore *AnchoreInfo) IsValid() bool {
 func setNonCliDefaultValues(v *viper.Viper) {
 	v.SetDefault("log.level", "")
 	v.SetDefault("log.file", "")
-	v.SetDefault("dev.profile-cpu", false)
-	v.SetDefault("dev.log", false)
 	v.SetDefault("anchore.account", "admin")
 	v.SetDefault("anchore.http.insecure", false)
 	v.SetDefault("anchore.http.timeout-seconds", 10)

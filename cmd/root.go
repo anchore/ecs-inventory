@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"runtime/pprof"
 
 	"github.com/anchore/elastic-container-gatherer/ecg"
 	"github.com/anchore/elastic-container-gatherer/ecg/mode"
@@ -19,18 +18,6 @@ var rootCmd = &cobra.Command{
 	Long:  "ECG (Elastic Container Gatherer) can poll Amazon ECS (Elastic Container Service) APIs to tell Anchore which Images are currently in-use",
 	Args:  cobra.MaximumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		if appConfig.Dev.ProfileCPU {
-			f, err := os.Create("cpu.profile")
-			if err != nil {
-				log.Error("unable to create CPU profile", err)
-			} else {
-				err := pprof.StartCPUProfile(f)
-				if err != nil {
-					log.Error("unable to start CPU profile", err)
-				}
-			}
-		}
-
 		if len(args) > 0 {
 			err := cmd.Help()
 			if err != nil {
@@ -57,10 +44,8 @@ var rootCmd = &cobra.Command{
 		case mode.PeriodicPolling:
 			ecg.PeriodicallyGetInventoryReport(appConfig)
 		default:
+			log.Debug("Running in single run mode")
 			report, err := ecg.GetInventoryReport(appConfig)
-			if appConfig.Dev.ProfileCPU {
-				pprof.StopCPUProfile()
-			}
 			if err != nil {
 				log.Error("Failed to get Image Results", err)
 				os.Exit(1)
