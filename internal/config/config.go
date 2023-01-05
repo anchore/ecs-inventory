@@ -36,17 +36,10 @@ type Application struct {
 	ConfigPath             string
 	Log                    Logging `mapstructure:"log"`
 	CliOptions             CliOnlyOptions
-	MissingTagPolicy       MissingTagConf `mapstructure:"missing-tag-policy"`
-	IgnoreNotRunning       bool           `mapstructure:"ignore-not-running"`
-	PollingIntervalSeconds int            `mapstructure:"polling-interval-seconds"`
-	AnchoreDetails         AnchoreInfo    `mapstructure:"anchore"`
-	Region                 string         `mapstructure:"region"`
-}
-
-// MissingTagConf details the policy for handling missing tags when reporting images
-type MissingTagConf struct {
-	Policy string `mapstructure:"policy"`
-	Tag    string `mapstructure:"tag,omitempty"`
+	IgnoreNotRunning       bool        `mapstructure:"ignore-not-running"`
+	PollingIntervalSeconds int         `mapstructure:"polling-interval-seconds"`
+	AnchoreDetails         AnchoreInfo `mapstructure:"anchore"`
+	Region                 string      `mapstructure:"region"`
 }
 
 // Information for posting in-use image details to Anchore (or any URL for that matter)
@@ -84,8 +77,6 @@ func setNonCliDefaultValues(v *viper.Viper) {
 	v.SetDefault("anchore.http.insecure", false)
 	v.SetDefault("anchore.http.timeout-seconds", 10)
 	v.SetDefault("ignore-not-running", true)
-	v.SetDefault("missing-tag-policy.policy", "digest")
-	v.SetDefault("missing-tag-policy.tag", "UNKNOWN")
 }
 
 // Load the Application Configuration from the Viper specifications
@@ -130,20 +121,6 @@ func (cfg *Application) Build() error {
 		default:
 			cfg.Log.Level = "error"
 		}
-	}
-
-	// add new policies here if we decide to support more
-	policies := []string{"digest", "insert", "drop"}
-	validPolicy := false
-	for _, p := range policies {
-		if cfg.MissingTagPolicy.Policy == p {
-			validPolicy = true
-			break
-		}
-	}
-
-	if !validPolicy {
-		return fmt.Errorf("missing-tag-policy.policy must be one of %v", policies)
 	}
 
 	return nil
