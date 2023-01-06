@@ -1,0 +1,16 @@
+log:
+  level: "info"
+  file: "/var/log/ecg.log"
+
+anchore:
+  url: http://localhost:8228
+  user: admin
+  password: foobar
+  account: admin
+  http:
+    insecure: false
+    timeout: 10
+
+region: "us-east-1"
+
+polling-interval-seconds: 60

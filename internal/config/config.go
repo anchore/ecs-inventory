@@ -12,16 +12,15 @@ package config
 
 import (
 	"fmt"
-
-	"gopkg.in/yaml.v2"
-
-	"github.com/adrg/xdg"
-	"github.com/anchore/elastic-container-gatherer/internal"
-	"github.com/mitchellh/go-homedir"
-	"github.com/spf13/viper"
-
 	"path"
 	"strings"
+
+	"github.com/adrg/xdg"
+	"github.com/mitchellh/go-homedir"
+	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
+
+	"github.com/anchore/elastic-container-gatherer/internal"
 )
 
 const redacted = "******"
@@ -37,17 +36,9 @@ type Application struct {
 	ConfigPath             string
 	Log                    Logging `mapstructure:"log"`
 	CliOptions             CliOnlyOptions
-	MissingTagPolicy       MissingTagConf `mapstructure:"missing-tag-policy"`
-	IgnoreNotRunning       bool           `mapstructure:"ignore-not-running"`
-	PollingIntervalSeconds int            `mapstructure:"polling-interval-seconds"`
-	AnchoreDetails         AnchoreInfo    `mapstructure:"anchore"`
-	Region                 string         `mapstructure:"region"`
-}
-
-// MissingTagConf details the policy for handling missing tags when reporting images
-type MissingTagConf struct {
-	Policy string `mapstructure:"policy"`
-	Tag    string `mapstructure:"tag,omitempty"`
+	PollingIntervalSeconds int         `mapstructure:"polling-interval-seconds"`
+	AnchoreDetails         AnchoreInfo `mapstructure:"anchore"`
+	Region                 string      `mapstructure:"region"`
 }
 
 // Information for posting in-use image details to Anchore (or any URL for that matter)
@@ -84,9 +75,6 @@ func setNonCliDefaultValues(v *viper.Viper) {
 	v.SetDefault("anchore.account", "admin")
 	v.SetDefault("anchore.http.insecure", false)
 	v.SetDefault("anchore.http.timeout-seconds", 10)
-	v.SetDefault("ignore-not-running", true)
-	v.SetDefault("missing-tag-policy.policy", "digest")
-	v.SetDefault("missing-tag-policy.tag", "UNKNOWN")
 }
 
 // Load the Application Configuration from the Viper specifications
@@ -94,9 +82,9 @@ func LoadConfigFromFile(v *viper.Viper, cliOpts *CliOnlyOptions) (*Application, 
 	// the user may not have a config, and this is OK, we can use the default config + default cobra cli values instead
 	setNonCliDefaultValues(v)
 	if cliOpts != nil {
-		_ = readConfig(v, cliOpts.ConfigPath)
+		_ = readConfig(v, cliOpts.ConfigPath, internal.ApplicationName)
 	} else {
-		_ = readConfig(v, "")
+		_ = readConfig(v, "", internal.ApplicationName)
 	}
 
 	config := &Application{
@@ -133,32 +121,19 @@ func (cfg *Application) Build() error {
 		}
 	}
 
-	// add new policies here if we decide to support more
-	policies := []string{"digest", "insert", "drop"}
-	validPolicy := false
-	for _, p := range policies {
-		if cfg.MissingTagPolicy.Policy == p {
-			validPolicy = true
-			break
-		}
-	}
-
-	if !validPolicy {
-		return fmt.Errorf("missing-tag-policy.policy must be one of %v", policies)
-	}
-
 	return nil
 }
 
-func readConfig(v *viper.Viper, configPath string) error {
+func readConfig(v *viper.Viper, configPath, applicationName string) error {
 	v.AutomaticEnv()
-	v.SetEnvPrefix(internal.ApplicationName)
+	v.SetEnvPrefix(applicationName)
 	// allow for nested options to be specified via environment variables
 	// e.g. pod.context = APPNAME_POD_CONTEXT
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 
 	// use explicitly the given user config
 	if configPath != "" {
+		fmt.Println("using config file:", configPath)
 		v.SetConfigFile(configPath)
 		if err := v.ReadInConfig(); err == nil {
 			return nil
@@ -171,13 +146,13 @@ func readConfig(v *viper.Viper, configPath string) error {
 
 	// 1. look for .<appname>.yaml (in the current directory)
 	v.AddConfigPath(".")
-	v.SetConfigName(internal.ApplicationName)
+	v.SetConfigName(applicationName)
 	if err := v.ReadInConfig(); err == nil {
 		return nil
 	}
 
 	// 2. look for .<appname>/config.yaml (in the current directory)
-	v.AddConfigPath("." + internal.ApplicationName)
+	v.AddConfigPath("." + applicationName)
 	v.SetConfigName("config")
 	if err := v.ReadInConfig(); err == nil {
 		return nil
@@ -187,16 +162,16 @@ func readConfig(v *viper.Viper, configPath string) error {
 	home, err := homedir.Dir()
 	if err == nil {
 		v.AddConfigPath(home)
-		v.SetConfigName("." + internal.ApplicationName)
+		v.SetConfigName("." + applicationName)
 		if err := v.ReadInConfig(); err == nil {
 			return nil
 		}
 	}
 
 	// 4. look for <appname>/config.yaml in xdg locations (starting with xdg home config dir, then moving upwards)
-	v.AddConfigPath(path.Join(xdg.ConfigHome, internal.ApplicationName))
+	v.AddConfigPath(path.Join(xdg.ConfigHome, applicationName))
 	for _, dir := range xdg.ConfigDirs {
-		v.AddConfigPath(path.Join(dir, internal.ApplicationName))
+		v.AddConfigPath(path.Join(dir, applicationName))
 	}
 	v.SetConfigName("config")
 	if err := v.ReadInConfig(); err == nil {

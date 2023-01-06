@@ -6,13 +6,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecs"
+
 	"github.com/anchore/elastic-container-gatherer/ecg/inventory"
 	"github.com/anchore/elastic-container-gatherer/ecg/logger"
 	"github.com/anchore/elastic-container-gatherer/ecg/reporter"
 	"github.com/anchore/elastic-container-gatherer/internal/config"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 var log logger.Logger
@@ -97,10 +98,20 @@ func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
 		if err != nil {
 			return inventory.Report{}, err
 		}
-		images, err := fetchImagesFromTasks(ecsClient, *cluster, tasks)
+
+		images := []inventory.ReportImage{}
+		// Must be at least one task to continue
+		if len(tasks) == 0 {
+			log.Debug("No tasks found in cluster", "cluster", *cluster)
+		} else {
+			images, err = fetchImagesFromTasks(ecsClient, *cluster, tasks)
+			if err != nil {
+				return inventory.Report{}, err
+			}
+		}
 
 		results = append(results, inventory.ReportItem{
-			Namespace: *cluster, //NOTE The key is Namespace to match the Anchore API but it's actually the cluster ARN
+			Namespace: *cluster, // NOTE The key is Namespace to match the Anchore API but it's actually the cluster ARN
 			Images:    images,
 		})
 	}

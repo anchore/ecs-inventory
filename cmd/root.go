@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/anchore/elastic-container-gatherer/ecg"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/anchore/elastic-container-gatherer/ecg"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -26,17 +27,19 @@ var rootCmd = &cobra.Command{
 		}
 
 		// TODO(bradjones) Validate anchore connection details here
-		//if appConfig.AnchoreDetails.IsValid() {
-		//dummyReport := inventory.Report{
-		//Results: []inventory.ReportItem{},
-		//}
-		//err := reporter.Post(dummyReport, appConfig.AnchoreDetails, appConfig)
-		//if err != nil {
-		//log.Error("Failed to validate connection to Anchore", err)
-		//}
-		//} else {
-		//log.Debug("Anchore details not specified, will not report inventory")
-		//}
+		/*
+			if appConfig.AnchoreDetails.IsValid() {
+				dummyReport := inventory.Report{
+					Results: []inventory.ReportItem{},
+				}
+				err := reporter.Post(dummyReport, appConfig.AnchoreDetails, appConfig)
+				if err != nil {
+					log.Error("Failed to validate connection to Anchore", err)
+				}
+			} else {
+				log.Debug("Anchore details not specified, will not report inventory")
+			}
+		*/
 
 		ecg.PeriodicallyGetInventoryReport(appConfig)
 	},
