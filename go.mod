@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/adrg/xdg v0.4.0
-	github.com/anchore/go-version v1.2.2-0.20200701162849-18adb9c92b9b
 	github.com/aws/aws-sdk-go v1.44.163
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/spf13/cobra v1.6.1
