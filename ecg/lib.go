@@ -30,7 +30,7 @@ func reportToStdout(report inventory.Report) error {
 	return nil
 }
 
-func HandleReport(report inventory.Report, cfg *config.Application) error {
+func HandleReport(report inventory.Report, cfg *config.AppConfig) error {
 	if cfg.AnchoreDetails.IsValid() {
 		if err := reporter.Post(report, cfg.AnchoreDetails, cfg); err != nil {
 			return fmt.Errorf("unable to report Inventory to Anchore: %w", err)
@@ -45,7 +45,7 @@ func HandleReport(report inventory.Report, cfg *config.Application) error {
 
 // PeriodicallyGetInventoryReport periodically retrieve image results and report/output them according to the configuration.
 // Note: Errors do not cause the function to exit, since this is periodically running
-func PeriodicallyGetInventoryReport(cfg *config.Application) {
+func PeriodicallyGetInventoryReport(cfg *config.AppConfig) {
 	// Fire off a ticker that reports according to a configurable polling interval
 	ticker := time.NewTicker(time.Duration(cfg.PollingIntervalSeconds) * time.Second)
 
@@ -66,7 +66,7 @@ func PeriodicallyGetInventoryReport(cfg *config.Application) {
 }
 
 // GetInventoryReport is an atomic method for getting in-use image results, in parallel for multiple clusters
-func GetInventoryReport(cfg *config.Application) (inventory.Report, error) {
+func GetInventoryReport(cfg *config.AppConfig) (inventory.Report, error) {
 	sessConfig := &aws.Config{}
 	if cfg.Region != "" {
 		sessConfig.Region = aws.String(cfg.Region)
