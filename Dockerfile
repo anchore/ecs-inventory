@@ -1,11 +1,12 @@
-FROM golang:latest as build
-WORKDIR /app
-COPY . .
-ENV CGO_ENABLED=0
-RUN go build -o /app/output/ecg
+FROM gcr.io/distroless/static-debian11:debug AS build
 
-FROM gcr.io/distroless/static:nonroot
-USER nonroot:nobody
+FROM scratch
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+
+WORKDIR /tmp
+
+COPY ecg /
+
 ARG BUILD_DATE
 ARG BUILD_VERSION
 ARG VCS_REF
@@ -21,5 +22,4 @@ LABEL org.opencontainers.image.description="ECG (Elastic Container Gatherer) is 
 LABEL org.opencontainers.image.vendor="Anchore, Inc."
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
-COPY --from=build /app/output/ecg /usr/bin/ecg
-ENTRYPOINT ["ecg"]
+ENTRYPOINT ["/ecg"]

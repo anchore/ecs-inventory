@@ -1,0 +1,19 @@
+version: '2.1'
+services:
+  elastic-container-gatherer:
+    volumes:
+      - ./config.yaml:/config.yaml:ro
+    image: anchore/ecg:latest
+    container_name: elastic-container-gatherer
+    environment:
+      ECG_ANCHORE_PASSWORD: ${ANCHORE_ENTERPRISE_IMAGE:-foo}
+      AWS_REGION: ${ANCHORE_ENTERPRISE_IMAGE:-us-west-2}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-bar}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-foobar}
+    command:
+      [
+        "--config=config.yaml",
+        # "--output=json", # throws unknown flag currently
+        "--polling-interval-seconds=300",
+        "-v"
+      ]
