@@ -23,7 +23,6 @@ version     show the version
 Flags:
 -c, --config string                     application config file
 -h, --help                              help for ecg
--o, --output string                     report output formatter, options=[json table] (default "json")
 -p, --polling-interval-seconds string   This specifies the polling interval of the ECS API in seconds (default "300")
 -r, --region string                     If set overrides the AWS_REGION environment variable/region specified in ECG config
 -v, --verbose count                     increase verbosity (-v = info, -vv = debug)
@@ -55,16 +54,13 @@ file is looked for is `~/.ecg/config.yaml`. The configuration file can be overri
 the `-c` flag.
 
 ```
-# same as -o ; the output format (options: table, json)
-output: "json"
-
 log:
   level: "debug"
   # location to write the log file (default is not to have a log file)
   file: "./ecg.log"
 
 anchore:
-url: <your anchore api url> (e.g. http://localhost:8228)
+  url: <your anchore api url> (e.g. http://localhost:8228)
   user: <ecg_inventory_user>
   password: $ECG_ANCHORE_PASSWORD
   http:

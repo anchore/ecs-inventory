@@ -13,7 +13,6 @@ services:
     command:
       [
         "--config=config.yaml",
-        # "--output=json", # throws unknown flag currently
         "--polling-interval-seconds=300",
         "-v"
       ]
