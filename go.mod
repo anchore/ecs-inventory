@@ -1,6 +1,6 @@
 module github.com/anchore/elastic-container-gatherer
 
-go 1.18
+go 1.19
 
 require (
 	github.com/adrg/xdg v0.4.0
