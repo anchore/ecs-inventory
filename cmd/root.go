@@ -43,7 +43,7 @@ var rootCmd = &cobra.Command{
 			}
 		*/
 
-		ecg.PeriodicallyGetInventoryReport(appConfig)
+		ecg.PeriodicallyGetInventoryReport(appConfig.PollingIntervalSeconds, appConfig.AnchoreDetails, appConfig.Region)
 	},
 }
 
