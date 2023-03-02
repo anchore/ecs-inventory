@@ -3,9 +3,10 @@ package config
 import (
 	"testing"
 
-	"github.com/anchore/elastic-container-gatherer/ecg/connection"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/anchore/elastic-container-gatherer/ecg/connection"
 )
 
 func TestLoadConfigFromFileCliConfigPath(t *testing.T) {

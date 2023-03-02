@@ -20,8 +20,8 @@ import (
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 
-	"github.com/anchore/elastic-container-gatherer/internal"
 	"github.com/anchore/elastic-container-gatherer/ecg/connection"
+	"github.com/anchore/elastic-container-gatherer/internal"
 )
 
 const redacted = "******"
@@ -33,11 +33,11 @@ type CliOnlyOptions struct {
 }
 
 type AppConfig struct {
-	Log                    Logging				  `mapstructure:"log"`
+	Log                    Logging `mapstructure:"log"`
 	CliOptions             CliOnlyOptions
-	PollingIntervalSeconds int					  `mapstructure:"polling-interval-seconds"`
+	PollingIntervalSeconds int                    `mapstructure:"polling-interval-seconds"`
 	AnchoreDetails         connection.AnchoreInfo `mapstructure:"anchore"`
-	Region                 string				  `mapstructure:"region"`
+	Region                 string                 `mapstructure:"region"`
 }
 
 // Logging Configuration
@@ -187,7 +187,6 @@ func (cfg AppConfig) String() string {
 
 	// yaml is pretty human friendly (at least when compared to json)
 	appCfgStr, err := yaml.Marshal(&cfg)
-
 	if err != nil {
 		return err.Error()
 	}
