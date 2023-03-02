@@ -3,6 +3,7 @@ package config
 import (
 	"testing"
 
+	"github.com/anchore/elastic-container-gatherer/ecg/connection"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
@@ -25,12 +26,12 @@ func TestLoadConfigFromFileCliConfigPath(t *testing.T) {
 			Level:        "info",
 			FileLocation: "/var/log/ecg.log",
 		},
-		AnchoreDetails: AnchoreInfo{
+		AnchoreDetails: connection.AnchoreInfo{
 			Account:  "admin",
 			User:     "admin",
 			Password: "foobar",
 			URL:      "http://localhost:8228",
-			HTTP: HTTPConfig{
+			HTTP: connection.HTTPConfig{
 				Insecure:       false,
 				TimeoutSeconds: 10,
 			},
@@ -70,12 +71,12 @@ func TestPasswordsAreObfuscated(t *testing.T) {
 			ConfigPath: "testdata/config.yaml",
 		},
 		PollingIntervalSeconds: 300,
-		AnchoreDetails: AnchoreInfo{
+		AnchoreDetails: connection.AnchoreInfo{
 			URL:      "http://localhost:8228/v1",
 			User:     "admin",
 			Password: "foobar",
 			Account:  "admin",
-			HTTP:     HTTPConfig{},
+			HTTP:     connection.HTTPConfig{},
 		},
 	}
 
@@ -119,10 +120,10 @@ func TestDefaultValuesSuppliedForEmptyConfig(t *testing.T) {
 		Log: Logging{
 			Level: "error",
 		},
-		AnchoreDetails: AnchoreInfo{
+		AnchoreDetails: connection.AnchoreInfo{
 			Account:  "admin",
 			Password: "",
-			HTTP: HTTPConfig{
+			HTTP: connection.HTTPConfig{
 				Insecure:       false,
 				TimeoutSeconds: 10,
 			},

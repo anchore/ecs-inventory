@@ -21,6 +21,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/anchore/elastic-container-gatherer/internal"
+	"github.com/anchore/elastic-container-gatherer/ecg/connection"
 )
 
 const redacted = "******"
@@ -32,26 +33,11 @@ type CliOnlyOptions struct {
 }
 
 type AppConfig struct {
-	Log                    Logging `mapstructure:"log"`
+	Log                    Logging				  `mapstructure:"log"`
 	CliOptions             CliOnlyOptions
-	PollingIntervalSeconds int         `mapstructure:"polling-interval-seconds"`
-	AnchoreDetails         AnchoreInfo `mapstructure:"anchore"`
-	Region                 string      `mapstructure:"region"`
-}
-
-// Information for posting in-use image details to Anchore (or any URL for that matter)
-type AnchoreInfo struct {
-	URL      string     `mapstructure:"url"`
-	User     string     `mapstructure:"user"`
-	Password string     `mapstructure:"password"`
-	Account  string     `mapstructure:"account"`
-	HTTP     HTTPConfig `mapstructure:"http"`
-}
-
-// Configurations for the HTTP Client itself (net/http)
-type HTTPConfig struct {
-	Insecure       bool `mapstructure:"insecure"`
-	TimeoutSeconds int  `mapstructure:"timeout-seconds"`
+	PollingIntervalSeconds int					  `mapstructure:"polling-interval-seconds"`
+	AnchoreDetails         connection.AnchoreInfo `mapstructure:"anchore"`
+	Region                 string				  `mapstructure:"region"`
 }
 
 // Logging Configuration
@@ -65,22 +51,15 @@ var DefaultConfigValues = AppConfig{
 		Level:        "",
 		FileLocation: "",
 	},
-	AnchoreDetails: AnchoreInfo{
+	AnchoreDetails: connection.AnchoreInfo{
 		Account: "admin",
-		HTTP: HTTPConfig{
+		HTTP: connection.HTTPConfig{
 			Insecure:       false,
 			TimeoutSeconds: 10,
 		},
 	},
 	Region:                 "",
 	PollingIntervalSeconds: 300,
-}
-
-// Return whether or not AnchoreDetails are specified
-func (anchore *AnchoreInfo) IsValid() bool {
-	return anchore.URL != "" &&
-		anchore.User != "" &&
-		anchore.Password != ""
 }
 
 func setDefaultValues(v *viper.Viper) {

@@ -3,11 +3,11 @@ package reporter
 import (
 	"testing"
 
-	"github.com/anchore/elastic-container-gatherer/internal/config"
+	"github.com/anchore/elastic-container-gatherer/ecg/connection"
 )
 
 func TestBuildUrl(t *testing.T) {
-	anchoreDetails := config.AnchoreInfo{
+	anchoreDetails := connection.AnchoreInfo{
 		URL:      "https://ancho.re",
 		User:     "admin",
 		Password: "foobar",

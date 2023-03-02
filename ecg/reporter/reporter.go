@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/anchore/elastic-container-gatherer/ecg/connection"
 	"github.com/anchore/elastic-container-gatherer/ecg/inventory"
 	"github.com/anchore/elastic-container-gatherer/internal/config"
 	"github.com/anchore/elastic-container-gatherer/internal/logger"
@@ -20,7 +21,7 @@ const ReportAPIPath = "v1/enterprise/inventories"
 // This method does the actual Reporting (via HTTP) to Anchore
 //
 //nolint:gosec
-func Post(report inventory.Report, anchoreDetails config.AnchoreInfo, appConfig *config.AppConfig) error {
+func Post(report inventory.Report, anchoreDetails connection.AnchoreInfo, appConfig *config.AppConfig) error {
 	logger.Log.Debug("Reporting results to Anchore")
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: anchoreDetails.HTTP.Insecure},
@@ -59,7 +60,7 @@ func Post(report inventory.Report, anchoreDetails config.AnchoreInfo, appConfig 
 	return nil
 }
 
-func buildURL(anchoreDetails config.AnchoreInfo) (string, error) {
+func buildURL(anchoreDetails connection.AnchoreInfo) (string, error) {
 	anchoreURL, err := url.Parse(anchoreDetails.URL)
 	if err != nil {
 		return "", err
