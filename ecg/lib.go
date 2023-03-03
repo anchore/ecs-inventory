@@ -115,11 +115,12 @@ func GetInventoryReport(region string) (inventory.Report, error) {
 			Images:    images,
 		})
 	}
-
+	// NOTE: clusterName not used for ECS as the clusternARN (used as the namespace in results payload) provides sufficient
+	// unique location data (account, region, clustername)
 	return inventory.Report{
 		Timestamp:     time.Now().UTC().Format(time.RFC3339),
 		Results:       results,
-		ClusterName:   region, // NOTE: The key here is ClusterName to match the Anchore API but it's actually the region
+		ClusterName:   "",
 		InventoryType: "ecs",
 	}, nil
 }
