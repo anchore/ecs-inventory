@@ -1,0 +1,9 @@
+.git
+.idea
+.venv
+.pytest*
+.circleci
+license.yaml
+.tox
+build/
+dist/

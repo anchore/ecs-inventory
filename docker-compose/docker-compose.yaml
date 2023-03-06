@@ -1,0 +1,18 @@
+version: '2.1'
+services:
+  anchore-ecs-inventory:
+    volumes:
+      - ./config.yaml:/config.yaml:ro
+    image: anchore/aei:latest
+    container_name: anchore-ecs-inventory
+    environment:
+      AEI_ANCHORE_PASSWORD: ${ANCHORE_ENTERPRISE_PASSWORD:-foobar}
+      AWS_REGION: ${AWS_REGION:-us-west-2}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-bar}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-foo}
+    command:
+      [
+        "--config=config.yaml",
+        "--polling-interval-seconds=300",
+        "-v"
+      ]
