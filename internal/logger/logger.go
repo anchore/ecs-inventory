@@ -44,7 +44,6 @@ func InitLogger(logConfig LogConfig) {
 	var cfg zap.Config
 
 	level, err := zap.ParseAtomicLevel(logConfig.Level)
-
 	if err != nil {
 		log.Printf("Invalid log level: %s, defaulting to `info`", logConfig.Level)
 		level = zap.NewAtomicLevelAt(zap.InfoLevel)
