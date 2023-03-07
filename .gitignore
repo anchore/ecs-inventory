@@ -1,5 +1,5 @@
 # most likely a binary from ad hoc go build
-/elastic-container-gatherer
+/anchore-ecs-inventory
 
 # Editor specific files
 .vscode

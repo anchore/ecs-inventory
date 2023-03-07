@@ -2,11 +2,11 @@
 The Config package handles the application configuration. Configurations can come from a variety of places, and
 are listed below in order of precedence:
   - Command Line
-  - .ecg.yaml
-  - .ecg/config.yaml
-  - ~/.ecg.yaml
-  - <XDG_CONFIG_HOME>/ecg/config.yaml
-  - Environment Variables prefixed with ECG_
+  - .anchore-ecs-inventory.yaml
+  - .anchore-ecs-inventory/config.yaml
+  - ~/.anchore-ecs-inventory.yaml
+  - <XDG_CONFIG_HOME>/anchore-ecs-inventory/config.yaml
+  - Environment Variables prefixed with ANCHORE-ECS-INVENTORY_
 */
 package config
 
@@ -20,8 +20,8 @@ import (
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 
-	"github.com/anchore/elastic-container-gatherer/ecg/connection"
-	"github.com/anchore/elastic-container-gatherer/internal"
+	"github.com/anchore/anchore-ecs-inventory/ecg/connection"
+	"github.com/anchore/anchore-ecs-inventory/internal"
 )
 
 const redacted = "******"

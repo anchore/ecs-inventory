@@ -1,6 +1,6 @@
 log:
   level: "info"
-  file: "/var/log/ecg.log"
+  file: "/var/log/anchore-ecs-inventory.log"
 
 anchore:
   url: http://localhost:8228

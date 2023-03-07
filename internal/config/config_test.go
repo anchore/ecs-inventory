@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/anchore/elastic-container-gatherer/ecg/connection"
+	"github.com/anchore/anchore-ecs-inventory/ecg/connection"
 )
 
 func TestLoadConfigFromFileCliConfigPath(t *testing.T) {
@@ -25,7 +25,7 @@ func TestLoadConfigFromFileCliConfigPath(t *testing.T) {
 		},
 		Log: Logging{
 			Level:        "info",
-			FileLocation: "/var/log/ecg.log",
+			FileLocation: "/var/log/anchore-ecs-inventory.log",
 		},
 		AnchoreDetails: connection.AnchoreInfo{
 			Account:  "admin",
@@ -58,7 +58,7 @@ func TestLoadConfigFromFileBadCliConfig(t *testing.T) {
 func TestReadConfigNoConfigsPresent(t *testing.T) {
 	t.Cleanup(cleanup)
 
-	err := readConfig(viper.GetViper(), "", "ecg-but-not-really-lets-break-this-test")
+	err := readConfig(viper.GetViper(), "", "anchore-ecs-inventory-but-not-really-lets-break-this-test")
 
 	assert.Error(t, err)
 }

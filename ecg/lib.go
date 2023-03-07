@@ -10,10 +10,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
 
-	"github.com/anchore/elastic-container-gatherer/ecg/connection"
-	"github.com/anchore/elastic-container-gatherer/ecg/inventory"
-	"github.com/anchore/elastic-container-gatherer/ecg/logger"
-	"github.com/anchore/elastic-container-gatherer/ecg/reporter"
+	"github.com/anchore/anchore-ecs-inventory/ecg/connection"
+	"github.com/anchore/anchore-ecs-inventory/ecg/inventory"
+	"github.com/anchore/anchore-ecs-inventory/ecg/logger"
+	"github.com/anchore/anchore-ecs-inventory/ecg/reporter"
 )
 
 var log logger.Logger

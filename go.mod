@@ -1,4 +1,4 @@
-module github.com/anchore/elastic-container-gatherer
+module github.com/anchore/anchore-ecs-inventory
 
 go 1.19
 

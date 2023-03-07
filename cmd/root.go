@@ -8,15 +8,15 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/anchore/elastic-container-gatherer/ecg"
-	"github.com/anchore/elastic-container-gatherer/internal/config"
+	"github.com/anchore/anchore-ecs-inventory/ecg"
+	"github.com/anchore/anchore-ecs-inventory/internal/config"
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "ecg",
-	Short: "ECG tells Anchore which images are in use in your ECS clusters",
-	Long:  "ECG (Elastic Container Gatherer) can poll Amazon ECS (Elastic Container Service) APIs to tell Anchore which Images are currently in-use",
+	Use:   "anchore-ecs-inventory",
+	Short: "anchore-ecs-inventory tells Anchore which images are in use in your ECS clusters",
+	Long:  "anchore-ecs-inventory can poll Amazon ECS (Elastic Container Service) APIs to tell Anchore which Images are currently in-use",
 	Args:  cobra.MaximumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) > 0 {
@@ -49,14 +49,16 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	opt := "polling-interval-seconds"
-	rootCmd.Flags().StringP(opt, "p", strconv.Itoa(config.DefaultConfigValues.PollingIntervalSeconds), "This specifies the polling interval of the ECS API in seconds")
+	rootCmd.Flags().
+		StringP(opt, "p", strconv.Itoa(config.DefaultConfigValues.PollingIntervalSeconds), "This specifies the polling interval of the ECS API in seconds")
 	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
 		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
 		os.Exit(1)
 	}
 
 	opt = "region"
-	rootCmd.Flags().StringP(opt, "r", config.DefaultConfigValues.Region, "If set overrides the AWS_REGION environment variable/region specified in ECG config")
+	rootCmd.Flags().
+		StringP(opt, "r", config.DefaultConfigValues.Region, "If set overrides the AWS_REGION environment variable/region specified in anchore-ecs-inventory config")
 	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
 		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
 		os.Exit(1)

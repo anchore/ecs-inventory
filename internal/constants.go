@@ -1,4 +1,4 @@
 package internal
 
 // note: do not change this
-const ApplicationName = "ecg"
+const ApplicationName = "anchore-ecs-inventory"

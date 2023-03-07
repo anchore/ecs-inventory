@@ -5,7 +5,7 @@ COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certifica
 
 WORKDIR /tmp
 
-COPY ecg /
+COPY anchore-ecs-inventory /
 
 ARG BUILD_DATE
 ARG BUILD_VERSION
@@ -22,4 +22,4 @@ LABEL org.opencontainers.image.description="AEI (Anchore ECS Inventory) is a too
 LABEL org.opencontainers.image.vendor="Anchore, Inc."
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
-ENTRYPOINT ["/ecg"]
+ENTRYPOINT ["/anchore-ecs-inventory"]
