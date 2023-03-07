@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/anchore/elastic-container-gatherer/internal"
-	"github.com/anchore/elastic-container-gatherer/internal/version"
+	"github.com/anchore/anchore-ecs-inventory/internal"
+	"github.com/anchore/anchore-ecs-inventory/internal/version"
 )
 
 var outputFormat string
@@ -20,7 +20,8 @@ var versionCmd = &cobra.Command{
 }
 
 func init() {
-	versionCmd.Flags().StringVarP(&outputFormat, "output", "o", "text", "format to show version information (available=[text, json])")
+	versionCmd.Flags().
+		StringVarP(&outputFormat, "output", "o", "text", "format to show version information (available=[text, json])")
 
 	rootCmd.AddCommand(versionCmd)
 }

@@ -7,14 +7,16 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/anchore/elastic-container-gatherer/ecg"
-	"github.com/anchore/elastic-container-gatherer/internal/config"
-	"github.com/anchore/elastic-container-gatherer/internal/logger"
+	"github.com/anchore/anchore-ecs-inventory/ecg"
+	"github.com/anchore/anchore-ecs-inventory/internal/config"
+	"github.com/anchore/anchore-ecs-inventory/internal/logger"
 )
 
-var appConfig *config.AppConfig
-var cliOnlyOpts config.CliOnlyOptions
-var log logger.Logger
+var (
+	appConfig   *config.AppConfig
+	cliOnlyOpts config.CliOnlyOptions
+	log         logger.Logger
+)
 
 func init() {
 	setGlobalCliOptions()

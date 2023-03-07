@@ -1,7 +1,7 @@
 log:
   level: "info"
   # location to write the log file (default is not to have a log file)
-  file: "./ecg.log"
+  file: "./anchore-ecs-inventory.log"
 
 anchore:
   url: http://localhost:8228

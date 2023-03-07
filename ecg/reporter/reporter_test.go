@@ -3,7 +3,7 @@ package reporter
 import (
 	"testing"
 
-	"github.com/anchore/elastic-container-gatherer/ecg/connection"
+	"github.com/anchore/anchore-ecs-inventory/ecg/connection"
 )
 
 func TestBuildUrl(t *testing.T) {
