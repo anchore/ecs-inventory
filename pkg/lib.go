@@ -1,4 +1,4 @@
-package ecg
+package pkg
 
 import (
 	"encoding/json"
@@ -6,10 +6,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/anchore/anchore-ecs-inventory/ecg/connection"
-	"github.com/anchore/anchore-ecs-inventory/ecg/inventory"
-	"github.com/anchore/anchore-ecs-inventory/ecg/logger"
-	"github.com/anchore/anchore-ecs-inventory/ecg/reporter"
+	"github.com/anchore/anchore-ecs-inventory/pkg/connection"
+	"github.com/anchore/anchore-ecs-inventory/pkg/inventory"
+	"github.com/anchore/anchore-ecs-inventory/pkg/logger"
+	"github.com/anchore/anchore-ecs-inventory/pkg/reporter"
 )
 
 var log logger.Logger

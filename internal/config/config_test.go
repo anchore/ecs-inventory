@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/anchore/anchore-ecs-inventory/ecg/connection"
+	"github.com/anchore/anchore-ecs-inventory/pkg/connection"
 )
 
 func TestLoadConfigFromFileCliConfigPath(t *testing.T) {

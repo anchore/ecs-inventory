@@ -20,8 +20,8 @@ import (
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 
-	"github.com/anchore/anchore-ecs-inventory/ecg/connection"
 	"github.com/anchore/anchore-ecs-inventory/internal"
+	"github.com/anchore/anchore-ecs-inventory/pkg/connection"
 )
 
 const redacted = "******"

@@ -8,8 +8,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/anchore/anchore-ecs-inventory/ecg"
 	"github.com/anchore/anchore-ecs-inventory/internal/config"
+	"github.com/anchore/anchore-ecs-inventory/pkg"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -43,7 +43,7 @@ var rootCmd = &cobra.Command{
 			}
 		*/
 
-		ecg.PeriodicallyGetInventoryReport(appConfig.PollingIntervalSeconds, appConfig.AnchoreDetails, appConfig.Region)
+		pkg.PeriodicallyGetInventoryReport(appConfig.PollingIntervalSeconds, appConfig.AnchoreDetails, appConfig.Region)
 	},
 }
 

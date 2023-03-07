@@ -10,9 +10,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/anchore/anchore-ecs-inventory/ecg/connection"
-	"github.com/anchore/anchore-ecs-inventory/ecg/inventory"
 	"github.com/anchore/anchore-ecs-inventory/internal/logger"
+	"github.com/anchore/anchore-ecs-inventory/pkg/connection"
+	"github.com/anchore/anchore-ecs-inventory/pkg/inventory"
 )
 
 const ReportAPIPath = "v1/enterprise/inventories"

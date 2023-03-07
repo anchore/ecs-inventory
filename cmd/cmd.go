@@ -7,9 +7,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/anchore/anchore-ecs-inventory/ecg"
 	"github.com/anchore/anchore-ecs-inventory/internal/config"
 	"github.com/anchore/anchore-ecs-inventory/internal/logger"
+	"github.com/anchore/anchore-ecs-inventory/pkg"
 )
 
 var (
@@ -61,7 +61,7 @@ func initLogging() {
 
 	logger.InitLogger(logConfig)
 	log = logger.Log
-	ecg.SetLogger(logger.Log)
+	pkg.SetLogger(logger.Log)
 }
 
 func logAppConfig() {
