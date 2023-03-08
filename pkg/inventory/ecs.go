@@ -6,6 +6,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
+
+	"github.com/anchore/anchore-ecs-inventory/pkg/reporter"
 )
 
 // Check if AWS are present, should be stored in ~/.aws/credentials
@@ -42,7 +44,7 @@ func fetchTasksFromCluster(client *ecs.ECS, cluster string) ([]*string, error) {
 	return result.TaskArns, nil
 }
 
-func fetchImagesFromTasks(client *ecs.ECS, cluster string, tasks []*string) ([]ReportImage, error) {
+func fetchImagesFromTasks(client *ecs.ECS, cluster string, tasks []*string) ([]reporter.ReportImage, error) {
 	input := &ecs.DescribeTasksInput{
 		Cluster: aws.String(cluster),
 		Tasks:   tasks,
@@ -50,10 +52,10 @@ func fetchImagesFromTasks(client *ecs.ECS, cluster string, tasks []*string) ([]R
 
 	results, err := client.DescribeTasks(input)
 	if err != nil {
-		return []ReportImage{}, err
+		return []reporter.ReportImage{}, err
 	}
 
-	uniqueImages := make(map[string]ReportImage)
+	uniqueImages := make(map[string]reporter.ReportImage)
 
 	for _, task := range results.Tasks {
 		for _, container := range task.Containers {
@@ -62,7 +64,7 @@ func fetchImagesFromTasks(client *ecs.ECS, cluster string, tasks []*string) ([]R
 				digest = *container.ImageDigest
 			}
 			uniqueName := fmt.Sprintf("%s@%s", *container.Image, digest)
-			uniqueImages[uniqueName] = ReportImage{
+			uniqueImages[uniqueName] = reporter.ReportImage{
 				Tag:        *container.Image,
 				RepoDigest: digest,
 			}
@@ -70,7 +72,7 @@ func fetchImagesFromTasks(client *ecs.ECS, cluster string, tasks []*string) ([]R
 	}
 
 	// convert map of unique images to a slice
-	images := []ReportImage{}
+	images := []reporter.ReportImage{}
 	for _, image := range uniqueImages {
 		images = append(images, image)
 	}

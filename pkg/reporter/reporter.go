@@ -12,7 +12,6 @@ import (
 
 	"github.com/anchore/anchore-ecs-inventory/internal/logger"
 	"github.com/anchore/anchore-ecs-inventory/pkg/connection"
-	"github.com/anchore/anchore-ecs-inventory/pkg/inventory"
 )
 
 const ReportAPIPath = "v1/enterprise/inventories"
@@ -20,7 +19,7 @@ const ReportAPIPath = "v1/enterprise/inventories"
 // This method does the actual Reporting (via HTTP) to Anchore
 //
 //nolint:gosec
-func Post(report inventory.Report, anchoreDetails connection.AnchoreInfo) error {
+func Post(report Report, anchoreDetails connection.AnchoreInfo) error {
 	logger.Log.Debug("Reporting results to Anchore")
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: anchoreDetails.HTTP.Insecure},

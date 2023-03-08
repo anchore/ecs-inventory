@@ -1,6 +1,9 @@
 package inventory
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -8,17 +11,36 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 
 	"github.com/anchore/anchore-ecs-inventory/internal/logger"
+	"github.com/anchore/anchore-ecs-inventory/pkg/connection"
+	"github.com/anchore/anchore-ecs-inventory/pkg/reporter"
 )
 
-type Report struct {
-	Timestamp     string       `json:"timestamp,omitempty"` // Should be generated using time.Now.UTC() and formatted according to RFC Y-M-DTH:M:SZ
-	Results       []ReportItem `json:"results"`
-	ClusterName   string       `json:"cluster_name,omitempty"` // NOTE: The key here is ClusterName to match the Anchore API but it's actually the region
-	InventoryType string       `json:"inventory_type"`
+// Output the JSON formatted report to stdout
+func reportToStdout(report reporter.Report) error {
+	enc := json.NewEncoder(os.Stdout)
+	// prevent > and < from being escaped in the payload
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", " ")
+	if err := enc.Encode(report); err != nil {
+		return fmt.Errorf("unable to show inventory: %w", err)
+	}
+	return nil
 }
 
-// GetInventoryReport is an atomic method for getting in-use image results, in parallel for multiple clusters
-func GetInventoryReport(region string) (Report, error) {
+func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo) error {
+	if anchoreDetails.IsValid() {
+		if err := reporter.Post(report, anchoreDetails); err != nil {
+			return fmt.Errorf("unable to report Inventory to Anchore: %w", err)
+		}
+	} else {
+		logger.Log.Debug("Anchore details not specified, not reporting inventory")
+	}
+
+	// Encode the report to JSON and output to stdout (maintains same behaviour as when multiple presenters were supported)
+	return reportToStdout(report)
+}
+
+func GetInventoryReportsForRegion(region string, anchoreDetails connection.AnchoreInfo) error {
 	sessConfig := &aws.Config{}
 	if region != "" {
 		sessConfig.Region = aws.String(region)
@@ -30,49 +52,63 @@ func GetInventoryReport(region string) (Report, error) {
 
 	err = checkAWSCredentials(sess)
 	if err != nil {
-		return Report{}, err
+		return err
 	}
 
 	ecsClient := ecs.New(sess)
 
 	clusters, err := fetchClusters(ecsClient)
 	if err != nil {
-		return Report{}, err
+		return err
 	}
-
-	results := []ReportItem{}
 
 	for _, cluster := range clusters {
-		logger.Log.Debug("Found cluster", "cluster", *cluster)
-
-		// Fetch tasks in cluster
-		tasks, err := fetchTasksFromCluster(ecsClient, *cluster)
+		report, err := GetInventoryReportForCluster(*cluster, ecsClient)
 		if err != nil {
-			return Report{}, err
+			return err
 		}
 
-		images := []ReportImage{}
-		// Must be at least one task to continue
-		if len(tasks) == 0 {
-			logger.Log.Debug("No tasks found in cluster", "cluster", *cluster)
-		} else {
-			images, err = fetchImagesFromTasks(ecsClient, *cluster, tasks)
-			if err != nil {
-				return Report{}, err
-			}
+		err = HandleReport(report, anchoreDetails)
+		if err != nil {
+			return err
 		}
-
-		results = append(results, ReportItem{
-			Namespace: *cluster, // NOTE The key is Namespace to match the Anchore API but it's actually the cluster ARN
-			Images:    images,
-		})
 	}
+
+	return nil
+}
+
+// GetInventoryReportForCluster is an atomic method for getting in-use image results, for a cluster
+func GetInventoryReportForCluster(cluster string, ecsClient *ecs.ECS) (reporter.Report, error) {
+	logger.Log.Debug("Found cluster", "cluster", cluster)
+
+	// Fetch tasks in cluster
+	tasks, err := fetchTasksFromCluster(ecsClient, cluster)
+	if err != nil {
+		return reporter.Report{}, err
+	}
+
+	images := []reporter.ReportImage{}
+	// Must be at least one task to continue
+	if len(tasks) == 0 {
+		logger.Log.Debug("No tasks found in cluster", "cluster", cluster)
+	} else {
+		images, err = fetchImagesFromTasks(ecsClient, cluster, tasks)
+		if err != nil {
+			return reporter.Report{}, err
+		}
+	}
+
+	results := []reporter.ReportItem{}
+	results = append(results, reporter.ReportItem{
+		Namespace: "", // NOTE The key is Namespace to match the Anchore API but it's actually the cluster ARN
+		Images:    images,
+	})
 	// NOTE: clusterName not used for ECS as the clusternARN (used as the namespace in results payload) provides sufficient
 	// unique location data (account, region, clustername)
-	return Report{
+	return reporter.Report{
 		Timestamp:     time.Now().UTC().Format(time.RFC3339),
 		Results:       results,
-		ClusterName:   "",
+		ClusterName:   cluster,
 		InventoryType: "ecs",
 	}, nil
 }
