@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -62,21 +63,33 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 		return err
 	}
 
-	for _, cluster := range clusters {
-		report, err := GetInventoryReportForCluster(*cluster, ecsClient)
-		if err != nil {
-			return err
-		}
+	// Waitgroup to wait for all goroutines to finish
+	var wg sync.WaitGroup
+	wg.Add(len(clusters))
 
-		// Only report if there are images present in the cluster
-		if len(report.Results) != 0 {
-			err = HandleReport(report, anchoreDetails)
+	for _, cluster := range clusters {
+		go func(cluster string) {
+			defer wg.Done()
+
+			// New ecs client for each goroutine
+			ecsClient := ecs.New(sess)
+
+			report, err := GetInventoryReportForCluster(cluster, ecsClient)
 			if err != nil {
-				return err
+				logger.Log.Error("Failed to get inventory report for cluster", err)
 			}
-		}
+
+			// Only report if there are images present in the cluster
+			if len(report.Results) != 0 {
+				err = HandleReport(report, anchoreDetails)
+				if err != nil {
+					logger.Log.Error("Failed to report inventory for cluster", err)
+				}
+			}
+		}(*cluster)
 	}
 
+	wg.Wait()
 	return nil
 }
 
