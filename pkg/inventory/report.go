@@ -17,7 +17,6 @@ import (
 	"github.com/anchore/anchore-ecs-inventory/pkg/reporter"
 )
 
-// Output the JSON formatted report to stdout
 func reportToStdout(report reporter.Report) error {
 	enc := json.NewEncoder(os.Stdout)
 	// prevent > and < from being escaped in the payload
@@ -38,7 +37,6 @@ func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo)
 		logger.Log.Debug("Anchore details not specified, not reporting inventory")
 	}
 
-	// Encode the report to JSON and output to stdout (maintains same behaviour as when multiple presenters were supported)
 	return reportToStdout(report)
 }
 
@@ -64,7 +62,6 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 		return err
 	}
 
-	// Waitgroup to wait for all goroutines to finish
 	var wg sync.WaitGroup
 	wg.Add(len(clusters))
 
@@ -72,7 +69,6 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 		go func(cluster string) {
 			defer wg.Done()
 
-			// New ecs client for each goroutine
 			ecsClient := ecs.New(sess)
 
 			report, err := GetInventoryReportForCluster(cluster, ecsClient)
@@ -98,7 +94,6 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 func GetInventoryReportForCluster(cluster string, ecsClient ecsiface.ECSAPI) (reporter.Report, error) {
 	logger.Log.Debug("Found cluster", "cluster", cluster)
 
-	// Fetch tasks in cluster
 	tasks, err := fetchTasksFromCluster(ecsClient, cluster)
 	if err != nil {
 		return reporter.Report{}, err
