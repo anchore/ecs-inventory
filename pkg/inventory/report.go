@@ -22,7 +22,7 @@ func reportToStdout(report reporter.Report) error {
 	enc := json.NewEncoder(os.Stdout)
 	// prevent > and < from being escaped in the payload
 	enc.SetEscapeHTML(false)
-	enc.SetIndent("", " ")
+	enc.SetIndent("", "  ")
 	if err := enc.Encode(report); err != nil {
 		return fmt.Errorf("unable to show inventory: %w", err)
 	}
