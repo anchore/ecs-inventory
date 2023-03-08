@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 
 	"github.com/anchore/anchore-ecs-inventory/pkg/reporter"
 )
@@ -20,7 +21,7 @@ func checkAWSCredentials(sess *session.Session) error {
 	return nil
 }
 
-func fetchClusters(client *ecs.ECS) ([]*string, error) {
+func fetchClusters(client ecsiface.ECSAPI) ([]*string, error) {
 	input := &ecs.ListClustersInput{}
 
 	result, err := client.ListClusters(input)
@@ -31,7 +32,7 @@ func fetchClusters(client *ecs.ECS) ([]*string, error) {
 	return result.ClusterArns, nil
 }
 
-func fetchTasksFromCluster(client *ecs.ECS, cluster string) ([]*string, error) {
+func fetchTasksFromCluster(client ecsiface.ECSAPI, cluster string) ([]*string, error) {
 	input := &ecs.ListTasksInput{
 		Cluster: aws.String(cluster),
 	}
@@ -44,7 +45,7 @@ func fetchTasksFromCluster(client *ecs.ECS, cluster string) ([]*string, error) {
 	return result.TaskArns, nil
 }
 
-func fetchImagesFromTasks(client *ecs.ECS, cluster string, tasks []*string) ([]reporter.ReportImage, error) {
+func fetchImagesFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*string) ([]reporter.ReportImage, error) {
 	input := &ecs.DescribeTasksInput{
 		Cluster: aws.String(cluster),
 		Tasks:   tasks,

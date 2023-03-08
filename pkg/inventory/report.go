@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 
 	"github.com/anchore/anchore-ecs-inventory/internal/logger"
 	"github.com/anchore/anchore-ecs-inventory/pkg/connection"
@@ -94,7 +95,7 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 }
 
 // GetInventoryReportForCluster is an atomic method for getting in-use image results, for a cluster
-func GetInventoryReportForCluster(cluster string, ecsClient *ecs.ECS) (reporter.Report, error) {
+func GetInventoryReportForCluster(cluster string, ecsClient ecsiface.ECSAPI) (reporter.Report, error) {
 	logger.Log.Debug("Found cluster", "cluster", cluster)
 
 	// Fetch tasks in cluster
