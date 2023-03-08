@@ -68,9 +68,12 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 			return err
 		}
 
-		err = HandleReport(report, anchoreDetails)
-		if err != nil {
-			return err
+		// Only report if there are images present in the cluster
+		if len(report.Results) != 0 {
+			err = HandleReport(report, anchoreDetails)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -87,22 +90,22 @@ func GetInventoryReportForCluster(cluster string, ecsClient *ecs.ECS) (reporter.
 		return reporter.Report{}, err
 	}
 
-	images := []reporter.ReportImage{}
+	results := []reporter.ReportItem{}
+
 	// Must be at least one task to continue
 	if len(tasks) == 0 {
 		logger.Log.Debug("No tasks found in cluster", "cluster", cluster)
 	} else {
-		images, err = fetchImagesFromTasks(ecsClient, cluster, tasks)
+		images, err := fetchImagesFromTasks(ecsClient, cluster, tasks)
 		if err != nil {
 			return reporter.Report{}, err
 		}
+		results = append(results, reporter.ReportItem{
+			Namespace: "", // NOTE The key is Namespace to match the Anchore API but it's actually the cluster ARN
+			Images:    images,
+		})
 	}
 
-	results := []reporter.ReportItem{}
-	results = append(results, reporter.ReportItem{
-		Namespace: "", // NOTE The key is Namespace to match the Anchore API but it's actually the cluster ARN
-		Images:    images,
-	})
 	// NOTE: clusterName not used for ECS as the clusternARN (used as the namespace in results payload) provides sufficient
 	// unique location data (account, region, clustername)
 	return reporter.Report{
