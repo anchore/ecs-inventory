@@ -62,6 +62,8 @@ var DefaultConfigValues = AppConfig{
 	PollingIntervalSeconds: 300,
 }
 
+var ErrConfigNotFound = fmt.Errorf("application config not found")
+
 func setDefaultValues(v *viper.Viper) {
 	v.SetDefault("log.level", DefaultConfigValues.Log.Level)
 	v.SetDefault("log.file", DefaultConfigValues.Log.FileLocation)
@@ -174,7 +176,7 @@ func readConfig(v *viper.Viper, configPath, applicationName string) error {
 		return nil
 	}
 
-	return fmt.Errorf("application config not found")
+	return ErrConfigNotFound
 }
 
 func (cfg AppConfig) String() string {
