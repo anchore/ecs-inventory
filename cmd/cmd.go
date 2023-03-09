@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -42,10 +43,20 @@ func Execute() {
 
 func InitAppConfig() {
 	cfg, err := config.LoadConfigFromFile(viper.GetViper(), &cliOnlyOpts)
-	if err != nil {
-		fmt.Printf("failed to load application config: \n\t%+v\n", err)
+	if errors.Is(err, config.ErrConfigNotFound) {
+		fmt.Println(
+			"Please ensure that a config file is specified with the --config flag or " +
+				"is present at one of the following locations:\n" +
+				"\t- ./anchore-ecs-inventory.yaml\n" +
+				"\t- ./.anchore-ecs-inventory/config.yaml\n" +
+				"\t- $HOME/anchore-ecs-inventory.yaml\n" +
+				"\t- $XDG_CONFIG_HOME/anchore-ecs-inventory/config.yaml")
+		os.Exit(1)
+	} else if err != nil {
+		fmt.Printf("Failed to load application config: \n\t%+v\n", err)
 		os.Exit(1)
 	}
+
 	appConfig = cfg
 }
 
