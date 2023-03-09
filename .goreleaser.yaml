@@ -20,7 +20,7 @@ builds:
       -X github.com/anchore/anchore-ecs-inventory/internal/version.version={{.Version}}
       -X github.com/anchore/anchore-ecs-inventory/internal/version.gitCommit={{.Commit}}
       -X github.com/anchore/anchore-ecs-inventory/internal/version.buildDate={{.Date}}
-    # -X github.com/anchore/anchore-ecs-inventory/internal/version.gitTreeState={{.Env.BUILD_GIT_TREE_STATE}}
+      -X github.com/anchore/anchore-ecs-inventory/internal/version.gitDescription={{.Summary}}
 
 
 archives:
