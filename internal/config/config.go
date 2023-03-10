@@ -38,6 +38,7 @@ type AppConfig struct {
 	PollingIntervalSeconds int                    `mapstructure:"polling-interval-seconds"`
 	AnchoreDetails         connection.AnchoreInfo `mapstructure:"anchore"`
 	Region                 string                 `mapstructure:"region"`
+	Quiet                  bool                   `mapstructure:"quiet"` // if true do not log the inventory report to stdout
 }
 
 // Logging Configuration
@@ -60,6 +61,7 @@ var DefaultConfigValues = AppConfig{
 	},
 	Region:                 "",
 	PollingIntervalSeconds: 300,
+	Quiet:                  false,
 }
 
 var ErrConfigNotFound = fmt.Errorf("application config not found")

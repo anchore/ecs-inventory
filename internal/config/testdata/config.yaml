@@ -14,3 +14,5 @@ anchore:
 region: "us-east-1"
 
 polling-interval-seconds: 60
+
+quiet: true

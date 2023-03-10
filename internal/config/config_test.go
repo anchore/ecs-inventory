@@ -39,6 +39,7 @@ func TestLoadConfigFromFileCliConfigPath(t *testing.T) {
 		},
 		Region:                 "us-east-1",
 		PollingIntervalSeconds: 60,
+		Quiet:                  true,
 	}
 
 	assert.EqualValues(t, expectedCfg, appCfg)
@@ -97,6 +98,7 @@ anchoredetails:
     insecure: false
     timeoutseconds: 0
 region: ""
+quiet: false
 `
 
 	assert.Equal(t, expected, config.String())

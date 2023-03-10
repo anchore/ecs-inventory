@@ -24,6 +24,7 @@ Flags:
 -c, --config string                     application config file
 -h, --help                              help for anchore-ecs-inventory
 -p, --polling-interval-seconds string   This specifies the polling interval of the ECS API in seconds (default "300")
+-q, --quiet                             Suppresses inventory report output to stdout
 -r, --region string                     If set overrides the AWS_REGION environment variable/region specified in ECG config
 -v, --verbose count                     increase verbosity (-v = info, -vv = debug)
 
@@ -66,4 +67,6 @@ anchore:
   http:
     insecure: true
     timeout-seconds: 10
+
+quiet: false
 ```

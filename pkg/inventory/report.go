@@ -28,7 +28,7 @@ func reportToStdout(report reporter.Report) error {
 	return nil
 }
 
-func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo) error {
+func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo, quiet bool) error {
 	if anchoreDetails.IsValid() {
 		if err := reporter.Post(report, anchoreDetails); err != nil {
 			return fmt.Errorf("unable to report Inventory to Anchore: %w", err)
@@ -37,10 +37,13 @@ func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo)
 		logger.Log.Debug("Anchore details not specified, not reporting inventory")
 	}
 
-	return reportToStdout(report)
+	if !quiet {
+		return reportToStdout(report)
+	}
+	return nil
 }
 
-func GetInventoryReportsForRegion(region string, anchoreDetails connection.AnchoreInfo) error {
+func GetInventoryReportsForRegion(region string, anchoreDetails connection.AnchoreInfo, quiet bool) error {
 	logger.Log.Info("Getting Inventory Reports for region", "region", region)
 	sessConfig := &aws.Config{}
 	if region != "" {
@@ -79,7 +82,7 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 
 			// Only report if there are images present in the cluster
 			if len(report.Results) != 0 {
-				err = HandleReport(report, anchoreDetails)
+				err = HandleReport(report, anchoreDetails, quiet)
 				if err != nil {
 					logger.Log.Error("Failed to report inventory for cluster", err)
 				}
