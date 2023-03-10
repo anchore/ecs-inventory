@@ -41,6 +41,7 @@ func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo)
 }
 
 func GetInventoryReportsForRegion(region string, anchoreDetails connection.AnchoreInfo) error {
+	logger.Log.Info("Getting Inventory Reports for region", "region", region)
 	sessConfig := &aws.Config{}
 	if region != "" {
 		sessConfig.Region = aws.String(region)
@@ -105,10 +106,12 @@ func GetInventoryReportForCluster(cluster string, ecsClient ecsiface.ECSAPI) (re
 	if len(tasks) == 0 {
 		logger.Log.Debug("No tasks found in cluster", "cluster", cluster)
 	} else {
+		logger.Log.Debug("Found tasks in cluster", "cluster", cluster, "taskCount", len(tasks))
 		images, err := fetchImagesFromTasks(ecsClient, cluster, tasks)
 		if err != nil {
 			return reporter.Report{}, err
 		}
+		logger.Log.Info("Found images in cluster", "cluster", cluster, "imageCount", len(images))
 		results = append(results, reporter.ReportItem{
 			Namespace: "", // NOTE The key is Namespace to match the Anchore API but it's actually the cluster ARN
 			Images:    images,

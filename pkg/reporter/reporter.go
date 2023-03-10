@@ -20,7 +20,7 @@ const ReportAPIPath = "v1/enterprise/inventories"
 //
 //nolint:gosec
 func Post(report Report, anchoreDetails connection.AnchoreInfo) error {
-	logger.Log.Debug("Reporting results to Anchore")
+	logger.Log.Info("Reporting results to Anchore")
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: anchoreDetails.HTTP.Insecure},
 	}
