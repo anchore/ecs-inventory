@@ -44,7 +44,12 @@ var rootCmd = &cobra.Command{
 			}
 		*/
 
-		pkg.PeriodicallyGetInventoryReport(appConfig.PollingIntervalSeconds, appConfig.AnchoreDetails, appConfig.Region)
+		pkg.PeriodicallyGetInventoryReport(
+			appConfig.PollingIntervalSeconds,
+			appConfig.AnchoreDetails,
+			appConfig.Region,
+			appConfig.Quiet,
+		)
 	},
 }
 
@@ -60,6 +65,14 @@ func init() {
 	opt = "region"
 	rootCmd.Flags().
 		StringP(opt, "r", config.DefaultConfigValues.Region, "If set overrides the AWS_REGION environment variable/region specified in anchore-ecs-inventory config")
+	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
+		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
+		os.Exit(1)
+	}
+
+	opt = "quiet"
+	rootCmd.Flags().
+		BoolP(opt, "q", config.DefaultConfigValues.Quiet, "Suppresses inventory report output to stdout")
 	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
 		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
 		os.Exit(1)
