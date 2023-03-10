@@ -21,6 +21,7 @@ SUCCESS := $(BOLD)$(GREEN)
 # ci dependency versions
 GOLANG_CI_VERSION = v1.50.1
 GOSIMPORTS_VERSION = v0.3.4
+GORELEASER_VERSION = v1.16.0
 
 ## Build variables
 ifeq "$(strip $(VERSION))" ""
@@ -57,9 +58,14 @@ bootstrap-tools: $(TEMPDIR)
 	$(call title,Boostrapping tools)
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TEMPDIR)/ $(GOLANG_CI_VERSION)
 	GOBIN="$(realpath $(TEMPDIR))" go install github.com/rinchsan/gosimports/cmd/gosimports@$(GOSIMPORTS_VERSION)
+	GOBIN="$(abspath $(TEMPDIR))" go install github.com/goreleaser/goreleaser@$(GORELEASER_VERSION)
 
 .PHONY: bootstrap
 bootstrap: bootstrap-go bootstrap-tools ## Download and install all go dependencies (+ prep tooling in the ./tmp dir)
+
+.PHONY: ci-bootstrap
+ci-bootstrap: bootstrap
+	sudo apt update && sudo apt install -y bc jq
 
 .PHONY: static-analysis
 static-analysis: lint
@@ -95,3 +101,13 @@ unit: ## Run unit tests (with coverage)
 	@go tool cover -func $(COVER_REPORT) | grep total |  awk '{print substr($$3, 1, length($$3)-1)}' > $(COVER_TOTAL)
 	@echo "Coverage: $$(cat $(COVER_TOTAL))"
 	@if [ $$(echo "$$(cat $(COVER_TOTAL)) >= $(COVERAGE_THRESHOLD)" | bc -l) -ne 1 ]; then echo "$(RED)$(BOLD)Failed coverage quality gate (> $(COVERAGE_THRESHOLD)%)$(RESET)" && false; fi
+
+.PHONY: snapshot
+snapshot: ## Build a snapshot binaries and docker images
+	$(call title,Building snapshot binary)
+	$(TEMPDIR)/goreleaser release --skip-publish --clean --snapshot --config .goreleaser.yaml
+
+.PHONY: release
+release: ## Publish release binaries and docker images
+	$(call title, release binary)
+	$(TEMPDIR)/goreleaser release --clean --config .goreleaser.yaml
