@@ -27,6 +27,7 @@ var rootCmd = &cobra.Command{
 			}
 			os.Exit(1)
 		}
+		log.Info("Starting anchore-ecs-inventory")
 
 		// TODO(bradjones) Validate anchore connection details here
 		/*
