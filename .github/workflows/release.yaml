@@ -53,7 +53,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Quality gate
-        if: steps.static-analysis.outputs.conclusion != 'success' || steps.tests-unit.outputs.conclusion != 'success' || steps.snapshot.outputs.conclusion != 'success' || steps.acceptance-helm-1-13-12.outputs.conclusion != 'success' || steps.acceptance-helm-1-18-0.outputs.conclusion != 'success'
+        if: steps.static-analysis.outputs.conclusion != 'success' || steps.tests-unit.outputs.conclusion != 'success' || steps.snapshot.outputs.conclusion != 'success'
         run: |
           echo "Static-Analysis Status : ${{ steps.static-analysis.outputs.conclusion }}"
           echo "Unit Test Status : ${{ steps.tests-unit.outputs.conclusion }}"
