@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/anchore/anchore-ecs-inventory/internal/logger"
+	"github.com/anchore/ecs-inventory/internal/logger"
 )
 
 func setupLogger() {

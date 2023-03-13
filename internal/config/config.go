@@ -6,7 +6,7 @@ are listed below in order of precedence:
   - .anchore-ecs-inventory/config.yaml
   - ~/.anchore-ecs-inventory.yaml
   - <XDG_CONFIG_HOME>/anchore-ecs-inventory/config.yaml
-  - Environment Variables prefixed with ANCHORE-ECS-INVENTORY_
+  - Environment Variables prefixed with ANCHORE_ECS_INVENTORY_
 */
 package config
 
@@ -20,8 +20,8 @@ import (
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 
-	"github.com/anchore/anchore-ecs-inventory/internal"
-	"github.com/anchore/anchore-ecs-inventory/pkg/connection"
+	"github.com/anchore/ecs-inventory/internal"
+	"github.com/anchore/ecs-inventory/pkg/connection"
 )
 
 const redacted = "******"

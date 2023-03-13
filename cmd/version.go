@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/anchore/anchore-ecs-inventory/internal"
-	"github.com/anchore/anchore-ecs-inventory/internal/version"
+	"github.com/anchore/ecs-inventory/internal"
+	"github.com/anchore/ecs-inventory/internal/version"
 )
 
 var outputFormat string

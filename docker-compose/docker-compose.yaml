@@ -3,10 +3,10 @@ services:
   anchore-ecs-inventory:
     volumes:
       - ./config.yaml:/config.yaml:ro
-    image: anchore/aei:latest
+    image: anchore/ecs-inventory:latest
     container_name: anchore-ecs-inventory
     environment:
-      AEI_ANCHORE_PASSWORD: ${ANCHORE_ENTERPRISE_PASSWORD:-foobar}
+      ANCHORE_ENTERPRISE_API_PASSWORD: ${ANCHORE_ENTERPRISE_API_PASSWORD:-foobar}
       AWS_REGION: ${AWS_REGION:-us-west-2}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-bar}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-foo}
