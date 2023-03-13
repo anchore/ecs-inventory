@@ -12,9 +12,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 
-	"github.com/anchore/anchore-ecs-inventory/internal/logger"
-	"github.com/anchore/anchore-ecs-inventory/pkg/connection"
-	"github.com/anchore/anchore-ecs-inventory/pkg/reporter"
+	"github.com/anchore/ecs-inventory/internal/logger"
+	"github.com/anchore/ecs-inventory/pkg/connection"
+	"github.com/anchore/ecs-inventory/pkg/reporter"
 )
 
 func reportToStdout(report reporter.Report) error {

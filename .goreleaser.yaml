@@ -17,10 +17,10 @@ builds:
       -w
       -s
       -extldflags '-static'
-      -X github.com/anchore/anchore-ecs-inventory/internal/version.version={{.Version}}
-      -X github.com/anchore/anchore-ecs-inventory/internal/version.gitCommit={{.Commit}}
-      -X github.com/anchore/anchore-ecs-inventory/internal/version.buildDate={{.Date}}
-      -X github.com/anchore/anchore-ecs-inventory/internal/version.gitDescription={{.Summary}}
+      -X github.com/anchore/ecs-inventory/internal/version.version={{.Version}}
+      -X github.com/anchore/ecs-inventory/internal/version.gitCommit={{.Commit}}
+      -X github.com/anchore/ecs-inventory/internal/version.buildDate={{.Date}}
+      -X github.com/anchore/ecs-inventory/internal/version.gitDescription={{.Summary}}
 
 
 archives:

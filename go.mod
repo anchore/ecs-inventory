@@ -1,4 +1,4 @@
-module github.com/anchore/anchore-ecs-inventory
+module github.com/anchore/ecs-inventory
 
 go 1.19
 

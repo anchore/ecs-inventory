@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 
-	"github.com/anchore/anchore-ecs-inventory/pkg/reporter"
+	"github.com/anchore/ecs-inventory/pkg/reporter"
 )
 
 // Check if AWS are present, should be stored in ~/.aws/credentials

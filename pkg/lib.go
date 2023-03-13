@@ -3,9 +3,9 @@ package pkg
 import (
 	"time"
 
-	"github.com/anchore/anchore-ecs-inventory/pkg/connection"
-	"github.com/anchore/anchore-ecs-inventory/pkg/inventory"
-	"github.com/anchore/anchore-ecs-inventory/pkg/logger"
+	"github.com/anchore/ecs-inventory/pkg/connection"
+	"github.com/anchore/ecs-inventory/pkg/inventory"
+	"github.com/anchore/ecs-inventory/pkg/logger"
 )
 
 var log logger.Logger
