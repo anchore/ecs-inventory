@@ -6,7 +6,7 @@ are listed below in order of precedence:
   - .anchore-ecs-inventory/config.yaml
   - ~/.anchore-ecs-inventory.yaml
   - <XDG_CONFIG_HOME>/anchore-ecs-inventory/config.yaml
-  - Environment Variables prefixed with ANCHORE-ECS-INVENTORY_
+  - Environment Variables prefixed with ANCHORE_ECS_INVENTORY_
 */
 package config
 

@@ -9,7 +9,7 @@ Container Service (ECS).
 
 ```
 $ ./anchore-ecs-inventory --help
-ECG (Elastic Container Gatherer) can poll Amazon ECS (Elastic Container Service) APIs to tell Anchore which Images are currently in-use
+Anchore ECS Inventory can poll Amazon ECS (Elastic Container Service) APIs to tell Anchore which Images are currently in-use
 
 Usage:
 anchore-ecs-inventory [flags]
@@ -25,7 +25,7 @@ Flags:
 -h, --help                              help for anchore-ecs-inventory
 -p, --polling-interval-seconds string   This specifies the polling interval of the ECS API in seconds (default "300")
 -q, --quiet                             Suppresses inventory report output to stdout
--r, --region string                     If set overrides the AWS_REGION environment variable/region specified in ECG config
+-r, --region string                     If set overrides the AWS_REGION environment variable/region specified in the config file
 -v, --verbose count                     increase verbosity (-v = info, -vv = debug)
 
 Use "anchore-ecs-inventory [command] --help" for more information about a command.
@@ -63,7 +63,7 @@ log:
 anchore:
   url: <your anchore api url> (e.g. http://localhost:8228)
   user: <anchore-ecs-inventory_inventory_user>
-  password: $ECG_ANCHORE_PASSWORD
+  password: $ANCHORE_ECS_INVENTORY_PASSWORD
   http:
     insecure: true
     timeout-seconds: 10
