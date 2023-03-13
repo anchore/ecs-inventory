@@ -35,10 +35,10 @@ changelog:
 
 dockers:
   - image_templates:
-      - "anchore/anchore-ecs-inventory:latest"
-      - "anchore/anchore-ecs-inventory:{{ .Tag }}-amd64"
-      - "anchore/anchore-ecs-inventory:v{{ .Major }}-amd64"
-      - "anchore/anchore-ecs-inventory:v{{ .Major }}.{{ .Minor }}-amd64"
+      - "anchore/ecs-inventory:latest"
+      - "anchore/ecs-inventory:{{ .Tag }}-amd64"
+      - "anchore/ecs-inventory:v{{ .Major }}-amd64"
+      - "anchore/ecs-inventory:v{{ .Major }}.{{ .Minor }}-amd64"
     dockerfile: Dockerfile
     use: buildx
     build_flag_templates:
@@ -49,9 +49,9 @@ dockers:
       - "--build-arg=VCS_URL={{.GitURL}}"
 
   - image_templates:
-      - "anchore/anchore-ecs-inventory:{{ .Tag }}-arm64v8"
-      - "anchore/anchore-ecs-inventory:v{{ .Major }}-arm64v8"
-      - "anchore/anchore-ecs-inventory:v{{ .Major }}.{{ .Minor }}-arm64v8"
+      - "anchore/ecs-inventory:{{ .Tag }}-arm64v8"
+      - "anchore/ecs-inventory:v{{ .Major }}-arm64v8"
+      - "anchore/ecs-inventory:v{{ .Major }}.{{ .Minor }}-arm64v8"
     goarch: arm64
     dockerfile: Dockerfile
     use: buildx
@@ -63,20 +63,20 @@ dockers:
       - "--build-arg=VCS_URL={{.GitURL}}"
 
 docker_manifests:
-  - name_template: anchore/anchore-ecs-inventory:{{ .Tag }}
+  - name_template: anchore/ecs-inventory:{{ .Tag }}
     image_templates:
-      - anchore/anchore-ecs-inventory:{{ .Tag }}-amd64
-      - anchore/anchore-ecs-inventory:v{{ .Major }}-amd64
-      - anchore/anchore-ecs-inventory:v{{ .Major }}.{{ .Minor }}-amd64
-      - anchore/anchore-ecs-inventory:{{ .Tag }}-arm64v8
-      - anchore/anchore-ecs-inventory:v{{ .Major }}-arm64v8
-      - anchore/anchore-ecs-inventory:v{{ .Major }}.{{ .Minor }}-arm64v8
-  - name_template: anchore/anchore-ecs-inventory:latest
+      - anchore/ecs-inventory:{{ .Tag }}-amd64
+      - anchore/ecs-inventory:v{{ .Major }}-amd64
+      - anchore/ecs-inventory:v{{ .Major }}.{{ .Minor }}-amd64
+      - anchore/ecs-inventory:{{ .Tag }}-arm64v8
+      - anchore/ecs-inventory:v{{ .Major }}-arm64v8
+      - anchore/ecs-inventory:v{{ .Major }}.{{ .Minor }}-arm64v8
+  - name_template: anchore/ecs-inventory:latest
     image_templates:
-      - anchore/anchore-ecs-inventory:{{ .Tag }}-amd64
-      - anchore/anchore-ecs-inventory:v{{ .Major }}-amd64
-      - anchore/anchore-ecs-inventory:v{{ .Major }}.{{ .Minor }}-amd64
-      - anchore/anchore-ecs-inventory:{{ .Tag }}-arm64v8
-      - anchore/anchore-ecs-inventory:v{{ .Major }}-arm64v8
-      - anchore/anchore-ecs-inventory:v{{ .Major }}.{{ .Minor }}-arm64v8
+      - anchore/ecs-inventory:{{ .Tag }}-amd64
+      - anchore/ecs-inventory:v{{ .Major }}-amd64
+      - anchore/ecs-inventory:v{{ .Major }}.{{ .Minor }}-amd64
+      - anchore/ecs-inventory:{{ .Tag }}-arm64v8
+      - anchore/ecs-inventory:v{{ .Major }}-arm64v8
+      - anchore/ecs-inventory:v{{ .Major }}.{{ .Minor }}-arm64v8
       
