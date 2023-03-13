@@ -61,9 +61,9 @@ log:
   file: "./anchore-ecs-inventory.log"
 
 anchore:
-  url: <your anchore api url> (e.g. http://localhost:8228)
-  user: <anchore-ecs-inventory_inventory_user>
-  password: $ANCHORE_ECS_INVENTORY_PASSWORD
+  url: <anchore enterprise api url> (e.g. http://localhost:8228)
+  user: <anchore enterprise username>
+  password: $ANCHORE_ENTERPRISE_API_PASSWORD
   http:
     insecure: true
     timeout-seconds: 10
