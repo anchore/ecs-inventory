@@ -1,11 +1,12 @@
 # Anchore ECS Inventory
 
-`anchore-ecs-inventory` is a tool to gather an inventory of images in use by Amazon Elastic
-Container Service (ECS).
+`anchore-ecs-inventory` is a tool to gather an inventory of images in use by
+Amazon Elastic Container Service (ECS).
 
 ## Usage
 
-`anchore-ecs-inventory` is a command line tool. It can be run with the following command:
+`anchore-ecs-inventory` is a command line tool. It can be run with the following
+command:
 
 ```
 $ ./anchore-ecs-inventory --help
@@ -28,36 +29,38 @@ Flags:
 -r, --region string                     If set overrides the AWS_REGION environment variable/region specified in the config file
 -v, --verbose count                     increase verbosity (-v = info, -vv = debug)
 
-Use "anchore-ecs-inventory [command] --help" for more information about a command.
+Use "anchore-ecs-inventory [command] --help" for more information about a command
 ```
 
 ## Configuration
 
-`anchore-ecs-inventory` needs to be configured with AWS credentials and Anchore ECS Inventory configuration.
+`anchore-ecs-inventory` needs to be configured with AWS credentials and Anchore
+ECS Inventory configuration.
 
 ### AWS Credentials
 
-Anchore ECS Inventory uses the AWS SDK for Go. The SDK will look for credentials in the following
-order:
+Anchore ECS Inventory uses the AWS SDK for Go. The SDK will look for credentials
+in the following order:
 
 1. Environment variables
 2. Shared credentials file (~/.aws/credentials)
-    ```
-    [default]
-    aws_access_key_id = <YOUR_ACCESS_KEY_ID>
-    aws_secret_access_key = <YOUR_SECRET_ACCESS_KEY>
-    ```
+   ```
+   [default]
+   aws_access_key_id = <YOUR_ACCESS_KEY_ID>
+   aws_secret_access_key = <YOUR_SECRET_ACCESS_KEY>
+   ```
 
 ### Anchore ECS Inventory Configuration
 
-Anchore ECS Inventory can be configured with a configuration file. The default location the configuration
-file is looked for is `~/.anchore-ecs-inventory/config.yaml`. The configuration file can be overridden with
-the `-c` flag.
+Anchore ECS Inventory can be configured with a configuration file. The default
+location the configuration file is looked for is
+`~/.anchore-ecs-inventory/config.yaml`. The configuration file can be overridden
+with the `-c` flag.
 
-```
+```yaml
 log:
   level: "debug"
-  # location to write the log file (default is not to have a log file)
+  # location to write the log file (by default we log to STDOUT only)
   file: "./anchore-ecs-inventory.log"
 
 anchore:
@@ -70,3 +73,8 @@ anchore:
 
 quiet: false
 ```
+
+You can also override any configuration value with environment variables. They
+must be prefixed with `ANCHORE_ECS_INVENTORY_` and be in all caps. For example,
+`ANCHORE_ECS_INVENTORY_LOG_LEVEL=error` would override the `log.level`
+configuration
