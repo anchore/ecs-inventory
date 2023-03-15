@@ -6,7 +6,7 @@ import (
 
 // ReportItem represents a cluster and all it's unique images
 type ReportItem struct {
-	Namespace string        `json:"namespace,omitempty"` // NOTE The key is Namespace to match the Anchore API but it's actually passed as empty string
+	Namespace string        `json:"namespace"` // NOTE The key is Namespace to match the Anchore API but it's actually passed as empty string
 	Images    []ReportImage `json:"images"`
 }
 
