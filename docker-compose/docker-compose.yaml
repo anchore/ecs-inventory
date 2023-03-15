@@ -1,18 +1,15 @@
 version: '2.1'
+
 services:
   anchore-ecs-inventory:
-    volumes:
-      - ./config.yaml:/config.yaml:ro
-    image: anchore/ecs-inventory:latest
+    image: docker.io/anchore/ecs-inventory:latest
     container_name: anchore-ecs-inventory
+    volumes:
+      - ./anchore-ecs-inventory.yaml:/.anchore-ecs-inventory.yaml
+      - ./aws.config:/.aws/credentials
     environment:
-      ANCHORE_ENTERPRISE_API_PASSWORD: ${ANCHORE_ENTERPRISE_API_PASSWORD:-foobar}
-      AWS_REGION: ${AWS_REGION:-us-west-2}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-bar}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-foo}
-    command:
-      [
-        "--config=config.yaml",
-        "--polling-interval-seconds=300",
-        "-v"
-      ]
+      ANCHORE_ECS_INVENTORY_ANCHORE_URL: ${ANCHORE_ECS_INVENTORY_ANCHORE_URL:-http://localhost:8228}
+      ANCHORE_ECS_INVENTORY_ANCHORE_USER: ${ANCHORE_ECS_INVENTORY_ANCHORE_USER:-admin}
+      ANCHORE_ECS_INVENTORY_ANCHORE_PASSWORD: ${ANCHORE_ECS_INVENTORY_ANCHORE_PASSWORD:-foobar}
+      ANCHORE_ECS_INVENTORY_ANCHORE_ACCOUNT: ${ANCHORE_ECS_INVENTORY_ANCHORE_ACCOUNT:-admin}
+      ANCHORE_ECS_INVENTORY_REGION: ${ANCHORE_ECS_INVENTORY_REGION:-eu-west-2}

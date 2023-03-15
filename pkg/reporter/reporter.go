@@ -20,7 +20,7 @@ const ReportAPIPath = "v1/enterprise/inventories"
 //
 //nolint:gosec
 func Post(report Report, anchoreDetails connection.AnchoreInfo) error {
-	logger.Log.Info("Reporting results to Anchore")
+	logger.Log.Info("Reporting results to Anchore", "Account", anchoreDetails.Account)
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: anchoreDetails.HTTP.Insecure},
 	}
@@ -54,7 +54,7 @@ func Post(report Report, anchoreDetails connection.AnchoreInfo) error {
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("failed to report data to Anchore: %+v", resp)
 	}
-	logger.Log.Debug("Successfully reported results to Anchore")
+	logger.Log.Debug("Successfully reported results to Anchore", "Account", anchoreDetails.Account)
 	return nil
 }
 

@@ -54,22 +54,39 @@ in the following order:
 
 Anchore ECS Inventory can be configured with a configuration file. The default
 location the configuration file is looked for is
-`~/.anchore-ecs-inventory/config.yaml`. The configuration file can be overridden
+`~/.anchore-ecs-inventory.yaml`. The configuration file can be overridden
 with the `-c` flag.
 
 ```yaml
 log:
-  level: "debug"
-  # location to write the log file (by default we log to STDOUT only)
+  # level of logging that anchore-ecs-inventory will do  { 'error' | 'info' | 'debug }
+  level: "info"
+  
+  # location to write the log file (default is not to have a log file)
   file: "./anchore-ecs-inventory.log"
 
 anchore:
-  url: <anchore enterprise api url> (e.g. http://localhost:8228)
-  user: <anchore enterprise username>
-  password: $ANCHORE_ENTERPRISE_API_PASSWORD
+  # anchore enterprise api url  (e.g. http://localhost:8228)
+  url: $ANCHORE_ECS_INVENTORY_ANCHORE_URL
+  
+  # anchore enterprise username
+  user: $ANCHORE_ECS_INVENTORY_ANCHORE_USER 
+  
+  # anchore enterprise password
+  password: ANCHORE_ECS_INVENTORY_ANCHORE_PASSWORD
+  
+  # anchore enterprise account that the inventory will be sent
+  account: $ANCHORE_ECS_INVENTORY_ANCHORE_ACCOUNT
+  
   http:
     insecure: true
     timeout-seconds: 10
+
+# the aws region
+region: $ANCHORE_ECS_INVENTORY_REGION
+
+# frequency of which to poll the region
+polling-interval-seconds: 300
 
 quiet: false
 ```

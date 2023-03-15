@@ -1,0 +1,31 @@
+log:
+  # level of logging that anchore-ecs-inventory will do  { 'error' | 'info' | 'debug }
+  level: "info"
+
+  # location to write the log file (default is not to have a log file)
+  file: ""
+
+anchore:
+  # anchore enterprise api url  (e.g. http://localhost:8228)
+  url: $ANCHORE_ECS_INVENTORY_ANCHORE_URL
+
+  # anchore enterprise username
+  user: $ANCHORE_ECS_INVENTORY_ANCHORE_USER
+
+  # anchore enterprise password
+  password: ANCHORE_ECS_INVENTORY_ANCHORE_PASSWORD
+
+  # anchore enterprise account that the inventory will be sent
+  account: $ANCHORE_ECS_INVENTORY_ANCHORE_ACCOUNT
+
+  http:
+    insecure: true
+    timeout-seconds: 10
+
+# the aws region
+region: $ANCHORE_ECS_INVENTORY_REGION
+
+# frequency of which to poll the region
+polling-interval-seconds: 300
+
+quiet: false
