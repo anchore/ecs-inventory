@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 
 	"github.com/anchore/ecs-inventory/internal/logger"
+	"github.com/anchore/ecs-inventory/internal/tracker"
 	"github.com/anchore/ecs-inventory/pkg/connection"
 	"github.com/anchore/ecs-inventory/pkg/reporter"
 )
@@ -47,6 +48,7 @@ func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo,
 }
 
 func GetInventoryReportsForRegion(region string, anchoreDetails connection.AnchoreInfo, quiet, dryRun, metadata bool) error {
+	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Getting Inventory Reports for region: %s", region))
 	logger.Log.Info("Getting Inventory Reports for region", "region", region)
 	sessConfig := &aws.Config{}
 	if region != "" {
@@ -99,6 +101,7 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 
 // GetInventoryReportForCluster is an atomic method for getting in-use image results, for a cluster
 func GetInventoryReportForCluster(cluster string, ecsClient ecsiface.ECSAPI, metadata bool) (reporter.Report, error) {
+	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Getting Inventory Report for cluster: %s", cluster))
 	logger.Log.Debug("Found cluster", "cluster", cluster)
 
 	report := reporter.Report{

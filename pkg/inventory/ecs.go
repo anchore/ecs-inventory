@@ -3,12 +3,14 @@ package inventory
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 
+	"github.com/anchore/ecs-inventory/internal/tracker"
 	"github.com/anchore/ecs-inventory/pkg/reporter"
 )
 
@@ -25,6 +27,7 @@ func checkAWSCredentials(sess *session.Session) error {
 }
 
 func fetchClusters(client ecsiface.ECSAPI) ([]*string, error) {
+	defer tracker.TrackFunctionTime(time.Now(), "Fetching list of clusters")
 	input := &ecs.ListClustersInput{}
 
 	result, err := client.ListClusters(input)
@@ -36,6 +39,7 @@ func fetchClusters(client ecsiface.ECSAPI) ([]*string, error) {
 }
 
 func fetchTasksFromCluster(client ecsiface.ECSAPI, cluster string) ([]*string, error) {
+	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Fetching tasks from cluster: %s", cluster))
 	input := &ecs.ListTasksInput{
 		Cluster: aws.String(cluster),
 	}
@@ -62,6 +66,7 @@ func fetchServicesFromCluster(client ecsiface.ECSAPI, cluster string) ([]*string
 }
 
 func fetchContainersFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*string) ([]reporter.Container, error) {
+	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Fetching Containers from tasks for cluster: %s", cluster))
 	input := &ecs.DescribeTasksInput{
 		Cluster: aws.String(cluster),
 		Tasks:   tasks,
