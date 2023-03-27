@@ -49,6 +49,7 @@ var rootCmd = &cobra.Command{
 			appConfig.AnchoreDetails,
 			appConfig.Region,
 			appConfig.Quiet,
+			appConfig.DryRun,
 		)
 	},
 }
@@ -73,6 +74,14 @@ func init() {
 	opt = "quiet"
 	rootCmd.Flags().
 		BoolP(opt, "q", config.DefaultConfigValues.Quiet, "Suppresses inventory report output to stdout")
+	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
+		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
+		os.Exit(1)
+	}
+
+	opt = "dry-run"
+	rootCmd.Flags().
+		BoolP(opt, "d", config.DefaultConfigValues.DryRun, "Do not report inventory to Anchore")
 	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
 		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
 		os.Exit(1)
