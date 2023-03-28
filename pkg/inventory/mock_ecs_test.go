@@ -35,11 +35,17 @@ func (m *mockECSClient) DescribeTasks(*ecs.DescribeTasksInput) (*ecs.DescribeTas
 				TaskArn: aws.String("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000"),
 				Containers: []*ecs.Container{
 					{
+						ContainerArn: aws.String(
+							"arn:aws:ecs:us-east-1:123456789012:container/12345678-1234-1234-1234-111111111111",
+						),
 						Name:        aws.String("container-1"),
 						Image:       aws.String("image-1"),
 						ImageDigest: aws.String("sha256:1234567890123456789012345678901234567890123456789012345678901111"),
 					},
 					{
+						ContainerArn: aws.String(
+							"arn:aws:ecs:us-east-1:123456789012:container/12345678-1234-1234-1234-111111111112",
+						),
 						Name:        aws.String("container-2"),
 						Image:       aws.String("image-2"),
 						ImageDigest: aws.String("sha256:1234567890123456789012345678901234567890123456789012345678902222"),
@@ -50,11 +56,17 @@ func (m *mockECSClient) DescribeTasks(*ecs.DescribeTasksInput) (*ecs.DescribeTas
 				TaskArn: aws.String("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111"),
 				Containers: []*ecs.Container{
 					{
+						ContainerArn: aws.String(
+							"arn:aws:ecs:us-east-1:123456789012:container/12345678-1234-1234-1234-111111111113",
+						),
 						Name:        aws.String("container-3"),
 						Image:       aws.String("image-3"),
 						ImageDigest: aws.String("sha256:1234567890123456789012345678901234567890123456789012345678903333"),
 					},
 					{
+						ContainerArn: aws.String(
+							"arn:aws:ecs:us-east-1:123456789012:container/12345678-1234-1234-1234-111111111114",
+						),
 						Name:        aws.String("container-4-(same-image-as-3)"),
 						Image:       aws.String("image-3"),
 						ImageDigest: aws.String("sha256:1234567890123456789012345678901234567890123456789012345678903333"),

@@ -14,7 +14,7 @@ import (
 	"github.com/anchore/ecs-inventory/pkg/connection"
 )
 
-const ReportAPIPath = "v1/enterprise/inventories"
+const ReportAPIPath = "v1/enterprise/ecs-inventory"
 
 // This method does the actual Reporting (via HTTP) to Anchore
 //

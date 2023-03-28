@@ -80,3 +80,34 @@ func fetchImagesFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*strin
 
 	return images, nil
 }
+
+func fetchContainersFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*string) ([]reporter.Container, error) {
+	input := &ecs.DescribeTasksInput{
+		Cluster: aws.String(cluster),
+		Tasks:   tasks,
+	}
+
+	results, err := client.DescribeTasks(input)
+	if err != nil {
+		return []reporter.Container{}, err
+	}
+
+	containers := []reporter.Container{}
+
+	for _, task := range results.Tasks {
+		for _, container := range task.Containers {
+			digest := ""
+			if container.ImageDigest != nil {
+				digest = *container.ImageDigest
+			}
+			containers = append(containers, reporter.Container{
+				ARN:         *container.ContainerArn,
+				ImageTag:    *container.Image,
+				ImageDigest: digest,
+				TaskARN:     *task.TaskArn,
+			})
+		}
+	}
+
+	return containers, nil
+}
