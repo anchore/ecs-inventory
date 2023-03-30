@@ -32,7 +32,13 @@ func (m *mockECSClient) DescribeTasks(*ecs.DescribeTasksInput) (*ecs.DescribeTas
 	return &ecs.DescribeTasksOutput{
 		Tasks: []*ecs.Task{
 			{
-				TaskArn: aws.String("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000"),
+				TaskArn: aws.String(
+					"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000",
+				),
+				ClusterArn: aws.String("arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1"),
+				TaskDefinitionArn: aws.String(
+					"arn:aws:ecs:us-east-1:123456789012:task-definition/task-definition-1:1",
+				),
 				Containers: []*ecs.Container{
 					{
 						ContainerArn: aws.String(
@@ -53,7 +59,13 @@ func (m *mockECSClient) DescribeTasks(*ecs.DescribeTasksInput) (*ecs.DescribeTas
 				},
 			},
 			{
-				TaskArn: aws.String("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111"),
+				TaskArn: aws.String(
+					"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111",
+				),
+				ClusterArn: aws.String("arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1"),
+				TaskDefinitionArn: aws.String(
+					"arn:aws:ecs:us-east-1:123456789012:task-definition/task-definition-1:1",
+				),
 				Containers: []*ecs.Container{
 					{
 						ContainerArn: aws.String(

@@ -114,7 +114,10 @@ func GetInventoryReportForCluster(cluster string, ecsClient ecsiface.ECSAPI) (re
 	} else {
 		logger.Log.Debug("Found tasks in cluster", "cluster", cluster, "taskCount", len(tasks))
 
-		// TODO Get task metadata
+		taskMeta, err = fetchTasksMetadata(ecsClient, cluster, tasks)
+		if err != nil {
+			return reporter.Report{}, err
+		}
 
 		containers, err = fetchContainersFromTasks(ecsClient, cluster, tasks)
 		if err != nil {

@@ -75,3 +75,27 @@ func fetchContainersFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*s
 
 	return containers, nil
 }
+
+func fetchTasksMetadata(client ecsiface.ECSAPI, cluster string, tasks []*string) ([]reporter.Task, error) {
+	input := &ecs.DescribeTasksInput{
+		Cluster: aws.String(cluster),
+		Tasks:   tasks,
+	}
+
+	results, err := client.DescribeTasks(input)
+	if err != nil {
+		return []reporter.Task{}, err
+	}
+
+	var tasksMetadata []reporter.Task
+	for _, task := range results.Tasks {
+		tasksMetadata = append(tasksMetadata, reporter.Task{
+			ARN:        *task.TaskArn,
+			ClusterARN: *task.ClusterArn,
+			TaskDefARN: *task.TaskDefinitionArn,
+			// TODO ADD Tags & Service ARN
+		})
+	}
+
+	return tasksMetadata, nil
+}
