@@ -45,42 +45,6 @@ func fetchTasksFromCluster(client ecsiface.ECSAPI, cluster string) ([]*string, e
 	return result.TaskArns, nil
 }
 
-func fetchImagesFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*string) ([]reporter.ReportImage, error) {
-	input := &ecs.DescribeTasksInput{
-		Cluster: aws.String(cluster),
-		Tasks:   tasks,
-	}
-
-	results, err := client.DescribeTasks(input)
-	if err != nil {
-		return []reporter.ReportImage{}, err
-	}
-
-	uniqueImages := make(map[string]reporter.ReportImage)
-
-	for _, task := range results.Tasks {
-		for _, container := range task.Containers {
-			digest := ""
-			if container.ImageDigest != nil {
-				digest = *container.ImageDigest
-			}
-			uniqueName := fmt.Sprintf("%s@%s", *container.Image, digest)
-			uniqueImages[uniqueName] = reporter.ReportImage{
-				Tag:        *container.Image,
-				RepoDigest: digest,
-			}
-		}
-	}
-
-	// convert map of unique images to a slice
-	images := []reporter.ReportImage{}
-	for _, image := range uniqueImages {
-		images = append(images, image)
-	}
-
-	return images, nil
-}
-
 func fetchContainersFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*string) ([]reporter.Container, error) {
 	input := &ecs.DescribeTasksInput{
 		Cluster: aws.String(cluster),
