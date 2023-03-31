@@ -126,8 +126,6 @@ func GetInventoryReportForCluster(cluster string, ecsClient ecsiface.ECSAPI) (re
 		logger.Log.Info("Found containers in cluster", "cluster", cluster, "containerCount", len(containers))
 	}
 
-	// NOTE: clusterName not used for ECS as the clusternARN (used as the namespace in results payload) provides sufficient
-	// unique location data (account, region, clustername)
 	return reporter.Report{
 		Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		ClusterName: cluster,

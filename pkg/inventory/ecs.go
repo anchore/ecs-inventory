@@ -89,11 +89,17 @@ func fetchTasksMetadata(client ecsiface.ECSAPI, cluster string, tasks []*string)
 
 	var tasksMetadata []reporter.Task
 	for _, task := range results.Tasks {
+		tagMap := make(map[string]string)
+		for _, tag := range task.Tags {
+			tagMap[*tag.Key] = *tag.Value
+		}
+
 		tasksMetadata = append(tasksMetadata, reporter.Task{
 			ARN:        *task.TaskArn,
 			ClusterARN: *task.ClusterArn,
 			TaskDefARN: *task.TaskDefinitionArn,
-			// TODO ADD Tags & Service ARN
+			Tags:       tagMap,
+			// TODO ADD Service ARN
 		})
 	}
 
