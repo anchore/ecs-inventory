@@ -99,6 +99,7 @@ anchoredetails:
     timeoutseconds: 0
 region: ""
 quiet: false
+dryrun: false
 `
 
 	assert.Equal(t, expected, config.String())

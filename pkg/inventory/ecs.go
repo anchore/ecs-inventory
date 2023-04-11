@@ -45,7 +45,7 @@ func fetchTasksFromCluster(client ecsiface.ECSAPI, cluster string) ([]*string, e
 	return result.TaskArns, nil
 }
 
-func fetchImagesFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*string) ([]reporter.ReportImage, error) {
+func fetchContainersFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*string) ([]reporter.Container, error) {
 	input := &ecs.DescribeTasksInput{
 		Cluster: aws.String(cluster),
 		Tasks:   tasks,
@@ -53,10 +53,10 @@ func fetchImagesFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*strin
 
 	results, err := client.DescribeTasks(input)
 	if err != nil {
-		return []reporter.ReportImage{}, err
+		return []reporter.Container{}, err
 	}
 
-	uniqueImages := make(map[string]reporter.ReportImage)
+	containers := []reporter.Container{}
 
 	for _, task := range results.Tasks {
 		for _, container := range task.Containers {
@@ -64,19 +64,44 @@ func fetchImagesFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*strin
 			if container.ImageDigest != nil {
 				digest = *container.ImageDigest
 			}
-			uniqueName := fmt.Sprintf("%s@%s", *container.Image, digest)
-			uniqueImages[uniqueName] = reporter.ReportImage{
-				Tag:        *container.Image,
-				RepoDigest: digest,
-			}
+			containers = append(containers, reporter.Container{
+				ARN:         *container.ContainerArn,
+				ImageTag:    *container.Image,
+				ImageDigest: digest,
+				TaskARN:     *task.TaskArn,
+			})
 		}
 	}
 
-	// convert map of unique images to a slice
-	images := []reporter.ReportImage{}
-	for _, image := range uniqueImages {
-		images = append(images, image)
+	return containers, nil
+}
+
+func fetchTasksMetadata(client ecsiface.ECSAPI, cluster string, tasks []*string) ([]reporter.Task, error) {
+	input := &ecs.DescribeTasksInput{
+		Cluster: aws.String(cluster),
+		Tasks:   tasks,
 	}
 
-	return images, nil
+	results, err := client.DescribeTasks(input)
+	if err != nil {
+		return []reporter.Task{}, err
+	}
+
+	var tasksMetadata []reporter.Task
+	for _, task := range results.Tasks {
+		tagMap := make(map[string]string)
+		for _, tag := range task.Tags {
+			tagMap[*tag.Key] = *tag.Value
+		}
+
+		tasksMetadata = append(tasksMetadata, reporter.Task{
+			ARN:        *task.TaskArn,
+			ClusterARN: *task.ClusterArn,
+			TaskDefARN: *task.TaskDefinitionArn,
+			Tags:       tagMap,
+			// TODO ADD Service ARN
+		})
+	}
+
+	return tasksMetadata, nil
 }

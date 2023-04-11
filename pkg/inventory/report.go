@@ -28,12 +28,15 @@ func reportToStdout(report reporter.Report) error {
 	return nil
 }
 
-func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo, quiet bool) error {
-	if anchoreDetails.IsValid() {
+func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo, quiet, dryRun bool) error {
+	switch {
+	case dryRun:
+		logger.Log.Info("Dry run specified, not reporting inventory")
+	case anchoreDetails.IsValid():
 		if err := reporter.Post(report, anchoreDetails); err != nil {
 			return fmt.Errorf("unable to report Inventory to Anchore: %w", err)
 		}
-	} else {
+	default:
 		logger.Log.Debug("Anchore details not specified, not reporting inventory")
 	}
 
@@ -43,7 +46,7 @@ func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo,
 	return nil
 }
 
-func GetInventoryReportsForRegion(region string, anchoreDetails connection.AnchoreInfo, quiet bool) error {
+func GetInventoryReportsForRegion(region string, anchoreDetails connection.AnchoreInfo, quiet, dryRun bool) error {
 	logger.Log.Info("Getting Inventory Reports for region", "region", region)
 	sessConfig := &aws.Config{}
 	if region != "" {
@@ -80,9 +83,9 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 				logger.Log.Error("Failed to get inventory report for cluster", err)
 			}
 
-			// Only report if there are images present in the cluster
-			if len(report.Results) != 0 {
-				err = HandleReport(report, anchoreDetails, quiet)
+			// Only report if there are containers present in the cluster
+			if len(report.Containers) != 0 {
+				err = HandleReport(report, anchoreDetails, quiet, dryRun)
 				if err != nil {
 					logger.Log.Error("Failed to report inventory for cluster", err)
 				}
@@ -103,30 +106,31 @@ func GetInventoryReportForCluster(cluster string, ecsClient ecsiface.ECSAPI) (re
 		return reporter.Report{}, err
 	}
 
-	results := []reporter.ReportItem{}
+	containers := []reporter.Container{}
+	taskMeta := []reporter.Task{}
 
 	// Must be at least one task to continue
 	if len(tasks) == 0 {
 		logger.Log.Debug("No tasks found in cluster", "cluster", cluster)
 	} else {
 		logger.Log.Debug("Found tasks in cluster", "cluster", cluster, "taskCount", len(tasks))
-		images, err := fetchImagesFromTasks(ecsClient, cluster, tasks)
+
+		taskMeta, err = fetchTasksMetadata(ecsClient, cluster, tasks)
 		if err != nil {
 			return reporter.Report{}, err
 		}
-		logger.Log.Info("Found images in cluster", "cluster", cluster, "imageCount", len(images))
-		results = append(results, reporter.ReportItem{
-			Namespace: "", // NOTE The key is Namespace to match the Anchore API but it's actually the cluster ARN
-			Images:    images,
-		})
+
+		containers, err = fetchContainersFromTasks(ecsClient, cluster, tasks)
+		if err != nil {
+			return reporter.Report{}, err
+		}
+		logger.Log.Info("Found containers in cluster", "cluster", cluster, "containerCount", len(containers))
 	}
 
-	// NOTE: clusterName not used for ECS as the clusternARN (used as the namespace in results payload) provides sufficient
-	// unique location data (account, region, clustername)
 	return reporter.Report{
-		Timestamp:     time.Now().UTC().Format(time.RFC3339),
-		Results:       results,
-		ClusterName:   cluster,
-		InventoryType: "ecs",
+		Timestamp:   time.Now().UTC().Format(time.RFC3339),
+		ClusterName: cluster,
+		Containers:  containers,
+		Tasks:       taskMeta,
 	}, nil
 }

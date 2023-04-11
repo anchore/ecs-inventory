@@ -9,27 +9,27 @@ Amazon Elastic Container Service (ECS).
 command:
 
 ```
-$ ./anchore-ecs-inventory --help
-Anchore ECS Inventory can poll Amazon ECS (Elastic Container Service) APIs to tell Anchore which Images are currently in-use
+$ anchore-ecs-inventory can poll Amazon ECS (Elastic Container Service) APIs to tell Anchore which Images are currently in-use
 
 Usage:
-anchore-ecs-inventory [flags]
-anchore-ecs-inventory [command]
+  anchore-ecs-inventory [flags]
+  anchore-ecs-inventory [command]
 
 Available Commands:
-completion  Generate Completion script
-help        Help about any command
-version     show the version
+  completion  Generate Completion script
+  help        Help about any command
+  version     show the version
 
 Flags:
--c, --config string                     application config file
--h, --help                              help for anchore-ecs-inventory
--p, --polling-interval-seconds string   This specifies the polling interval of the ECS API in seconds (default "300")
--q, --quiet                             Suppresses inventory report output to stdout
--r, --region string                     If set overrides the AWS_REGION environment variable/region specified in the config file
--v, --verbose count                     increase verbosity (-v = info, -vv = debug)
+  -c, --config string                     application config file
+  -d, --dry-run                           do not report inventory to Anchore
+  -h, --help                              help for anchore-ecs-inventory
+  -p, --polling-interval-seconds string   this specifies the polling interval of the ECS API in seconds (default "300")
+  -q, --quiet                             suppresses inventory report output to stdout
+  -r, --region string                     if set overrides the AWS_REGION environment variable/region specified in anchore-ecs-inventory config
+  -v, --verbose count                     increase verbosity (-v = info, -vv = debug)
 
-Use "anchore-ecs-inventory [command] --help" for more information about a command
+Use "anchore-ecs-inventory [command] --help" for more information about a command. 
 ```
 
 ## Configuration

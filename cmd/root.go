@@ -49,6 +49,7 @@ var rootCmd = &cobra.Command{
 			appConfig.AnchoreDetails,
 			appConfig.Region,
 			appConfig.Quiet,
+			appConfig.DryRun,
 		)
 	},
 }
@@ -56,7 +57,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	opt := "polling-interval-seconds"
 	rootCmd.Flags().
-		StringP(opt, "p", strconv.Itoa(config.DefaultConfigValues.PollingIntervalSeconds), "This specifies the polling interval of the ECS API in seconds")
+		StringP(opt, "p", strconv.Itoa(config.DefaultConfigValues.PollingIntervalSeconds), "this specifies the polling interval of the ECS API in seconds")
 	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
 		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
 		os.Exit(1)
@@ -64,7 +65,7 @@ func init() {
 
 	opt = "region"
 	rootCmd.Flags().
-		StringP(opt, "r", config.DefaultConfigValues.Region, "If set overrides the AWS_REGION environment variable/region specified in anchore-ecs-inventory config")
+		StringP(opt, "r", config.DefaultConfigValues.Region, "if set overrides the AWS_REGION environment variable/region specified in anchore-ecs-inventory config")
 	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
 		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
 		os.Exit(1)
@@ -72,7 +73,15 @@ func init() {
 
 	opt = "quiet"
 	rootCmd.Flags().
-		BoolP(opt, "q", config.DefaultConfigValues.Quiet, "Suppresses inventory report output to stdout")
+		BoolP(opt, "q", config.DefaultConfigValues.Quiet, "suppresses inventory report output to stdout")
+	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
+		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
+		os.Exit(1)
+	}
+
+	opt = "dry-run"
+	rootCmd.Flags().
+		BoolP(opt, "d", config.DefaultConfigValues.DryRun, "do not report inventory to Anchore")
 	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
 		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
 		os.Exit(1)
