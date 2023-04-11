@@ -29,13 +29,14 @@ func reportToStdout(report reporter.Report) error {
 }
 
 func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo, quiet, dryRun bool) error {
-	if dryRun {
+	switch {
+	case dryRun:
 		logger.Log.Info("Dry run specified, not reporting inventory")
-	} else if anchoreDetails.IsValid() {
+	case anchoreDetails.IsValid():
 		if err := reporter.Post(report, anchoreDetails); err != nil {
 			return fmt.Errorf("unable to report Inventory to Anchore: %w", err)
 		}
-	} else {
+	default:
 		logger.Log.Debug("Anchore details not specified, not reporting inventory")
 	}
 
