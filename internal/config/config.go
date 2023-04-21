@@ -11,6 +11,7 @@ are listed below in order of precedence:
 package config
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"strings"
@@ -66,7 +67,7 @@ var DefaultConfigValues = AppConfig{
 	DryRun:                 false,
 }
 
-var ErrConfigNotFound = fmt.Errorf("application config not found")
+var ErrConfigFileNotFound = fmt.Errorf("application config file not found")
 
 func setDefaultValues(v *viper.Viper) {
 	v.SetDefault("log.level", DefaultConfigValues.Log.Level)
@@ -87,7 +88,16 @@ func LoadConfigFromFile(v *viper.Viper, cliOpts *CliOnlyOptions) (*AppConfig, er
 	}
 
 	err := readConfig(v, cliOptsConfigPath, internal.ApplicationName)
-	if err != nil {
+	if errors.Is(err, ErrConfigFileNotFound) {
+		fmt.Println(
+			"No config file found. One can be specified with the --config flag or " +
+				"is present at one of the following locations:\n" +
+				"\t- ./anchore-ecs-inventory.yaml\n" +
+				"\t- ./.anchore-ecs-inventory/config.yaml\n" +
+				"\t- $HOME/anchore-ecs-inventory.yaml\n" +
+				"\t- $XDG_CONFIG_HOME/anchore-ecs-inventory/config.yaml\n\n" +
+				"Using default configuration values.")
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -180,7 +190,7 @@ func readConfig(v *viper.Viper, configPath, applicationName string) error {
 		return nil
 	}
 
-	return ErrConfigNotFound
+	return ErrConfigFileNotFound
 }
 
 func (cfg AppConfig) String() string {
