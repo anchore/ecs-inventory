@@ -15,7 +15,9 @@ import (
 func checkAWSCredentials(sess *session.Session) error {
 	_, err := sess.Config.Credentials.Get()
 	if err != nil {
-		// TODO: Add some logs here detailing where to put the credentials
+		fmt.Println(
+			"Unable to get AWS credentials, please check ~/.aws/credentials file or environment variables are set correctly.",
+		)
 		return fmt.Errorf("unable to get AWS credentials: %w", err)
 	}
 	return nil
