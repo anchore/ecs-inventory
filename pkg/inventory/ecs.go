@@ -55,7 +55,7 @@ func fetchContainersFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*s
 
 	results, err := client.DescribeTasks(input)
 	if err != nil {
-		return []reporter.Container{}, err
+		return nil, err
 	}
 
 	containers := []reporter.Container{}
@@ -86,7 +86,7 @@ func fetchTasksMetadata(client ecsiface.ECSAPI, cluster string, tasks []*string)
 
 	results, err := client.DescribeTasks(input)
 	if err != nil {
-		return []reporter.Task{}, err
+		return nil, err
 	}
 
 	var tasksMetadata []reporter.Task
@@ -94,7 +94,7 @@ func fetchTasksMetadata(client ecsiface.ECSAPI, cluster string, tasks []*string)
 		// Tags may not be present in the task response so we need to fetch them explicitly
 		tagMap, err := fetchTagsForResource(client, *task.TaskArn)
 		if err != nil {
-			return []reporter.Task{}, err
+			return nil, err
 		}
 
 		tasksMetadata = append(tasksMetadata, reporter.Task{
