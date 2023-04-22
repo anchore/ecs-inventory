@@ -89,9 +89,10 @@ func fetchTasksMetadata(client ecsiface.ECSAPI, cluster string, tasks []*string)
 
 	var tasksMetadata []reporter.Task
 	for _, task := range results.Tasks {
-		tagMap := make(map[string]string)
-		for _, tag := range task.Tags {
-			tagMap[*tag.Key] = *tag.Value
+		// Tags may not be present in the task response so we need to fetch them explicitly
+		tagMap, err := fetchTagsForResource(client, *task.TaskArn)
+		if err != nil {
+			return []reporter.Task{}, err
 		}
 
 		tasksMetadata = append(tasksMetadata, reporter.Task{
@@ -104,4 +105,22 @@ func fetchTasksMetadata(client ecsiface.ECSAPI, cluster string, tasks []*string)
 	}
 
 	return tasksMetadata, nil
+}
+
+func fetchTagsForResource(client ecsiface.ECSAPI, resourceARN string) (map[string]string, error) {
+	input := &ecs.ListTagsForResourceInput{
+		ResourceArn: aws.String(resourceARN),
+	}
+
+	result, err := client.ListTagsForResource(input)
+	if err != nil {
+		return nil, err
+	}
+
+	tags := make(map[string]string)
+	for _, tag := range result.Tags {
+		tags[*tag.Key] = *tag.Value
+	}
+
+	return tags, nil
 }

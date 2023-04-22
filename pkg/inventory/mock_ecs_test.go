@@ -88,3 +88,23 @@ func (m *mockECSClient) DescribeTasks(*ecs.DescribeTasksInput) (*ecs.DescribeTas
 		},
 	}, nil
 }
+
+func (m mockECSClient) ListTagsForResource(input *ecs.ListTagsForResourceInput) (*ecs.ListTagsForResourceOutput, error) {
+	switch *input.ResourceArn {
+	case "arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000":
+		return &ecs.ListTagsForResourceOutput{
+			Tags: []*ecs.Tag{
+				{
+					Key:   aws.String("key-1"),
+					Value: aws.String("value-1"),
+				},
+				{
+					Key:   aws.String("key-2"),
+					Value: aws.String("value-2"),
+				},
+			},
+		}, nil
+	default:
+		return &ecs.ListTagsForResourceOutput{}, nil
+	}
+}
