@@ -3,10 +3,9 @@ package inventory
 import (
 	"testing"
 
+	"github.com/anchore/ecs-inventory/pkg/reporter"
 	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/anchore/ecs-inventory/pkg/reporter"
 )
 
 // Return a pointer to the passed value
@@ -316,6 +315,50 @@ func Test_fetchTagsForResource(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := fetchTagsForResource(tt.args.client, tt.args.resourceARN)
+			if (err != nil) != tt.wantErr {
+				assert.Error(t, err)
+			}
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_fetchServicesFromCluster(t *testing.T) {
+	type args struct {
+		client  ecsiface.ECSAPI
+		cluster string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []*string
+		wantErr bool
+	}{
+		{
+			name: "return error when list services fails",
+			args: args{
+				client: &mockECSClient{
+					ErrorOnListServices: true,
+				},
+				cluster: "cluster-1",
+			},
+			wantErr: true,
+		},
+		{
+			name: "successfully return services",
+			args: args{
+				client:  &mockECSClient{},
+				cluster: "cluster-1",
+			},
+			want: []*string{
+				GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1"),
+				GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := fetchServicesFromCluster(tt.args.client, tt.args.cluster)
 			if (err != nil) != tt.wantErr {
 				assert.Error(t, err)
 			}

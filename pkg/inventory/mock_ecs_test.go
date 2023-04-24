@@ -12,6 +12,7 @@ type mockECSClient struct {
 	ecsiface.ECSAPI
 	ErrorOnListCluster         bool
 	ErrorOnListTasks           bool
+	ErrorOnListServices        bool
 	ErrorOnDescribeTasks       bool
 	ErrorOnListTagsForResource bool
 }
@@ -36,6 +37,18 @@ func (m *mockECSClient) ListTasks(*ecs.ListTasksInput) (*ecs.ListTasksOutput, er
 		TaskArns: []*string{
 			aws.String("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000"),
 			aws.String("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111"),
+		},
+	}, nil
+}
+
+func (m *mockECSClient) ListServices(*ecs.ListServicesInput) (*ecs.ListServicesOutput, error) {
+	if m.ErrorOnListServices {
+		return nil, errors.New("list services error")
+	}
+	return &ecs.ListServicesOutput{
+		ServiceArns: []*string{
+			aws.String("arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1"),
+			aws.String("arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2"),
 		},
 	}, nil
 }

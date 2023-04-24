@@ -47,6 +47,19 @@ func fetchTasksFromCluster(client ecsiface.ECSAPI, cluster string) ([]*string, e
 	return result.TaskArns, nil
 }
 
+func fetchServicesFromCluster(client ecsiface.ECSAPI, cluster string) ([]*string, error) {
+	input := &ecs.ListServicesInput{
+		Cluster: aws.String(cluster),
+	}
+
+	result, err := client.ListServices(input)
+	if err != nil {
+		return nil, err
+	}
+
+	return result.ServiceArns, nil
+}
+
 func fetchContainersFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*string) ([]reporter.Container, error) {
 	input := &ecs.DescribeTasksInput{
 		Cluster: aws.String(cluster),
@@ -102,7 +115,7 @@ func fetchTasksMetadata(client ecsiface.ECSAPI, cluster string, tasks []*string)
 			ClusterARN: *task.ClusterArn,
 			TaskDefARN: *task.TaskDefinitionArn,
 			Tags:       tagMap,
-			// TODO ADD Service ARN
+			// ServiceARN: *task.ServiceArn,
 		})
 	}
 
