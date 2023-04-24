@@ -21,3 +21,9 @@ type Task struct {
 	Tags       map[string]string `json:"tags,omitempty"`
 	TaskDefARN string            `json:"task_definition_arn,omitempty"`
 }
+
+type Service struct {
+	ARN        string            `json:"arn"`
+	ClusterARN string            `json:"cluster_arn,omitempty"`
+	Tags       map[string]string `json:"tags,omitempty"`
+}

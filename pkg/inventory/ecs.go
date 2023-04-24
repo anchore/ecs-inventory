@@ -122,6 +122,35 @@ func fetchTasksMetadata(client ecsiface.ECSAPI, cluster string, tasks []*string)
 	return tasksMetadata, nil
 }
 
+func fetchServicesMetadata(client ecsiface.ECSAPI, cluster string, services []*string) ([]reporter.Service, error) {
+	input := &ecs.DescribeServicesInput{
+		Cluster:  aws.String(cluster),
+		Services: services,
+	}
+
+	results, err := client.DescribeServices(input)
+	if err != nil {
+		return nil, err
+	}
+
+	var servicesMetadata []reporter.Service
+	for _, service := range results.Services {
+		// Tags may not be present in the service response so we need to fetch them explicitly
+		tagMap, err := fetchTagsForResource(client, *service.ServiceArn)
+		if err != nil {
+			return nil, err
+		}
+
+		servicesMetadata = append(servicesMetadata, reporter.Service{
+			ARN:        *service.ServiceArn,
+			ClusterARN: *service.ClusterArn,
+			Tags:       tagMap,
+		})
+	}
+
+	return servicesMetadata, nil
+}
+
 func fetchTagsForResource(client ecsiface.ECSAPI, resourceARN string) (map[string]string, error) {
 	input := &ecs.ListTagsForResourceInput{
 		ResourceArn: aws.String(resourceARN),

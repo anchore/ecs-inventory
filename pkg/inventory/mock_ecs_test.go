@@ -15,6 +15,7 @@ type mockECSClient struct {
 	ErrorOnListServices        bool
 	ErrorOnDescribeTasks       bool
 	ErrorOnListTagsForResource bool
+	ErrorOnDescribeServices    bool
 }
 
 func (m *mockECSClient) ListClusters(*ecs.ListClustersInput) (*ecs.ListClustersOutput, error) {
@@ -122,7 +123,7 @@ func (m *mockECSClient) DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.Descr
 	return &ecs.DescribeTasksOutput{Tasks: tasks}, nil
 }
 
-func (m mockECSClient) ListTagsForResource(input *ecs.ListTagsForResourceInput) (*ecs.ListTagsForResourceOutput, error) {
+func (m *mockECSClient) ListTagsForResource(input *ecs.ListTagsForResourceInput) (*ecs.ListTagsForResourceOutput, error) {
 	if m.ErrorOnListTagsForResource {
 		return nil, errors.New("list tags for resource error")
 	}
@@ -140,7 +141,48 @@ func (m mockECSClient) ListTagsForResource(input *ecs.ListTagsForResourceInput) 
 				},
 			},
 		}, nil
+	case "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1":
+		return &ecs.ListTagsForResourceOutput{
+			Tags: []*ecs.Tag{
+				{
+					Key:   aws.String("svc-key-1"),
+					Value: aws.String("svc-value-1"),
+				},
+				{
+					Key:   aws.String("svc-key-2"),
+					Value: aws.String("svc-value-2"),
+				},
+			},
+		}, nil
 	default:
 		return &ecs.ListTagsForResourceOutput{}, nil
 	}
+}
+
+func (m *mockECSClient) DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error) {
+	if m.ErrorOnDescribeServices {
+		return nil, errors.New("describe services error")
+	}
+
+	services := []*ecs.Service{}
+	for _, s := range input.Services {
+		switch *s {
+		case "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1":
+			services = append(services, &ecs.Service{
+				ServiceArn: aws.String(
+					"arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1",
+				),
+				ClusterArn: aws.String("arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1"),
+			})
+		case "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2":
+			services = append(services, &ecs.Service{
+				ServiceArn: aws.String(
+					"arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2",
+				),
+				ClusterArn: aws.String("arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1"),
+			})
+		}
+	}
+
+	return &ecs.DescribeServicesOutput{Services: services}, nil
 }

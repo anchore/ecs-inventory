@@ -366,3 +366,79 @@ func Test_fetchServicesFromCluster(t *testing.T) {
 		})
 	}
 }
+
+func Test_fetchServicesMetadata(t *testing.T) {
+	type args struct {
+		client   ecsiface.ECSAPI
+		cluster  string
+		services []*string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []reporter.Service
+		wantErr bool
+	}{
+		{
+			name: "return error when describe services fails",
+			args: args{
+				client: &mockECSClient{
+					ErrorOnDescribeServices: true,
+				},
+				cluster: "cluster-1",
+				services: []*string{
+					GetPointerToValue("arn"),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "return error when list tags for resource fails",
+			args: args{
+				client: &mockECSClient{
+					ErrorOnListTagsForResource: true,
+				},
+				cluster: "cluster-1",
+				services: []*string{
+					GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1"),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "successfully return services",
+			args: args{
+				client:  &mockECSClient{},
+				cluster: "cluster-1",
+				services: []*string{
+					GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1"),
+					GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2"),
+				},
+			},
+			want: []reporter.Service{
+				{
+					ARN:        "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1",
+					ClusterARN: "arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1",
+					Tags: map[string]string{
+						"svc-key-1": "svc-value-1",
+						"svc-key-2": "svc-value-2",
+					},
+				},
+				{
+					ARN:        "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2",
+					ClusterARN: "arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1",
+					Tags:       map[string]string{},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := fetchServicesMetadata(tt.args.client, tt.args.cluster, tt.args.services)
+			if (err != nil) != tt.wantErr {
+				assert.Error(t, err)
+			}
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
