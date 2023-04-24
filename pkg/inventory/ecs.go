@@ -134,23 +134,30 @@ func fetchTasksMetadata(client ecsiface.ECSAPI, cluster string, tasks []*string)
 			return nil, err
 		}
 
-		groupParts := strings.Split(*task.Group, ":")
-		if len(groupParts) != 2 {
-			return nil, fmt.Errorf("unable to parse task group: %s", *task.Group)
-		}
-		serviceName := groupParts[1]
-		serviceArn, err := constructServiceARN(*task.ClusterArn, serviceName)
-		if err != nil {
-			return nil, err
-		}
-
-		tasksMetadata = append(tasksMetadata, reporter.Task{
+		tMetadata := reporter.Task{
 			ARN:        *task.TaskArn,
 			ClusterARN: *task.ClusterArn,
 			TaskDefARN: *task.TaskDefinitionArn,
 			Tags:       tagMap,
-			ServiceARN: serviceArn,
-		})
+		}
+
+		// Group will be "servive:serviceName" if the task is part of a service, otherwise it will be
+		// "family:taskDefinitionFamily" if the task is not part of a service.
+		groupParts := strings.Split(*task.Group, ":")
+		if len(groupParts) != 2 {
+			return nil, fmt.Errorf("unable to parse task group: %s", *task.Group)
+		}
+		groupType := groupParts[0]
+		if groupType == "service" {
+			serviceName := groupParts[1]
+			serviceArn, err := constructServiceARN(*task.ClusterArn, serviceName)
+			if err != nil {
+				return nil, err
+			}
+			tMetadata.ServiceARN = serviceArn
+		}
+
+		tasksMetadata = append(tasksMetadata, tMetadata)
 	}
 
 	return tasksMetadata, nil
