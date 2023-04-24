@@ -1,6 +1,8 @@
 package inventory
 
 import (
+	"errors"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
@@ -8,9 +10,16 @@ import (
 
 type mockECSClient struct {
 	ecsiface.ECSAPI
+	ErrorOnListCluster         bool
+	ErrorOnListTasks           bool
+	ErrorOnDescribeTasks       bool
+	ErrorOnListTagsForResource bool
 }
 
 func (m *mockECSClient) ListClusters(*ecs.ListClustersInput) (*ecs.ListClustersOutput, error) {
+	if m.ErrorOnListCluster {
+		return nil, errors.New("list cluster error")
+	}
 	return &ecs.ListClustersOutput{
 		ClusterArns: []*string{
 			aws.String("arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1"),
@@ -20,6 +29,9 @@ func (m *mockECSClient) ListClusters(*ecs.ListClustersInput) (*ecs.ListClustersO
 }
 
 func (m *mockECSClient) ListTasks(*ecs.ListTasksInput) (*ecs.ListTasksOutput, error) {
+	if m.ErrorOnListTasks {
+		return nil, errors.New("list tasks error")
+	}
 	return &ecs.ListTasksOutput{
 		TaskArns: []*string{
 			aws.String("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000"),
@@ -28,10 +40,15 @@ func (m *mockECSClient) ListTasks(*ecs.ListTasksInput) (*ecs.ListTasksOutput, er
 	}, nil
 }
 
-func (m *mockECSClient) DescribeTasks(*ecs.DescribeTasksInput) (*ecs.DescribeTasksOutput, error) {
-	return &ecs.DescribeTasksOutput{
-		Tasks: []*ecs.Task{
-			{
+func (m *mockECSClient) DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.DescribeTasksOutput, error) {
+	if m.ErrorOnDescribeTasks {
+		return nil, errors.New("describe tasks error")
+	}
+	tasks := []*ecs.Task{}
+	for _, t := range input.Tasks {
+		switch *t {
+		case "arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000":
+			tasks = append(tasks, &ecs.Task{
 				TaskArn: aws.String(
 					"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000",
 				),
@@ -57,8 +74,9 @@ func (m *mockECSClient) DescribeTasks(*ecs.DescribeTasksInput) (*ecs.DescribeTas
 						ImageDigest: aws.String("sha256:1234567890123456789012345678901234567890123456789012345678902222"),
 					},
 				},
-			},
-			{
+			})
+		case "arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111":
+			tasks = append(tasks, &ecs.Task{
 				TaskArn: aws.String(
 					"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111",
 				),
@@ -84,7 +102,32 @@ func (m *mockECSClient) DescribeTasks(*ecs.DescribeTasksInput) (*ecs.DescribeTas
 						ImageDigest: aws.String("sha256:1234567890123456789012345678901234567890123456789012345678903333"),
 					},
 				},
+			})
+		}
+	}
+
+	return &ecs.DescribeTasksOutput{Tasks: tasks}, nil
+}
+
+func (m mockECSClient) ListTagsForResource(input *ecs.ListTagsForResourceInput) (*ecs.ListTagsForResourceOutput, error) {
+	if m.ErrorOnListTagsForResource {
+		return nil, errors.New("list tags for resource error")
+	}
+	switch *input.ResourceArn {
+	case "arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000":
+		return &ecs.ListTagsForResourceOutput{
+			Tags: []*ecs.Tag{
+				{
+					Key:   aws.String("key-1"),
+					Value: aws.String("value-1"),
+				},
+				{
+					Key:   aws.String("key-2"),
+					Value: aws.String("value-2"),
+				},
 			},
-		},
-	}, nil
+		}, nil
+	default:
+		return &ecs.ListTagsForResourceOutput{}, nil
+	}
 }
