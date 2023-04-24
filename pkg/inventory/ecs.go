@@ -2,6 +2,7 @@ package inventory
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -91,6 +92,29 @@ func fetchContainersFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*s
 	return containers, nil
 }
 
+// Using the clusterARN and service name, construct the service ARN.
+// The DescribeTasks API does not return the service ARN only the service name.
+func constructServiceARN(clusterARN string, serviceName string) (string, error) {
+	arnParts := strings.Split(clusterARN, ":")
+	if len(arnParts) != 6 {
+		return "", fmt.Errorf("unable to parse cluster ARN: %s", clusterARN)
+	}
+	region := arnParts[3]
+	accountID := arnParts[4]
+
+	clusterParts := strings.Split(arnParts[5], "/")
+	if len(clusterParts) < 2 {
+		return "", fmt.Errorf("unable to parse cluster ARN: %s", clusterARN)
+	}
+	clusterName := clusterParts[1]
+
+	if region == "" || clusterName == "" || accountID == "" {
+		return "", fmt.Errorf("unable to parse cluster ARN: %s", clusterARN)
+	}
+
+	return fmt.Sprintf("arn:aws:ecs:%s:%s:service/%s/%s", region, accountID, clusterName, serviceName), nil
+}
+
 func fetchTasksMetadata(client ecsiface.ECSAPI, cluster string, tasks []*string) ([]reporter.Task, error) {
 	input := &ecs.DescribeTasksInput{
 		Cluster: aws.String(cluster),
@@ -110,12 +134,22 @@ func fetchTasksMetadata(client ecsiface.ECSAPI, cluster string, tasks []*string)
 			return nil, err
 		}
 
+		groupParts := strings.Split(*task.Group, ":")
+		if len(groupParts) != 2 {
+			return nil, fmt.Errorf("unable to parse task group: %s", *task.Group)
+		}
+		serviceName := groupParts[1]
+		serviceArn, err := constructServiceARN(*task.ClusterArn, serviceName)
+		if err != nil {
+			return nil, err
+		}
+
 		tasksMetadata = append(tasksMetadata, reporter.Task{
 			ARN:        *task.TaskArn,
 			ClusterARN: *task.ClusterArn,
 			TaskDefARN: *task.TaskDefinitionArn,
 			Tags:       tagMap,
-			// ServiceARN: *task.ServiceArn,
+			ServiceARN: serviceArn,
 		})
 	}
 

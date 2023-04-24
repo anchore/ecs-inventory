@@ -70,6 +70,7 @@ func (m *mockECSClient) DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.Descr
 				TaskDefinitionArn: aws.String(
 					"arn:aws:ecs:us-east-1:123456789012:task-definition/task-definition-1:1",
 				),
+				Group: aws.String("service:service-1"),
 				Containers: []*ecs.Container{
 					{
 						ContainerArn: aws.String(
@@ -98,6 +99,7 @@ func (m *mockECSClient) DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.Descr
 				TaskDefinitionArn: aws.String(
 					"arn:aws:ecs:us-east-1:123456789012:task-definition/task-definition-1:1",
 				),
+				Group: aws.String("service:service-1"),
 				Containers: []*ecs.Container{
 					{
 						ContainerArn: aws.String(

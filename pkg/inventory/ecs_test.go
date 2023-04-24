@@ -245,6 +245,7 @@ func Test_fetchTasksMetadata(t *testing.T) {
 				{
 					ARN:        "arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000",
 					ClusterARN: "arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1",
+					ServiceARN: "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1",
 					TaskDefARN: "arn:aws:ecs:us-east-1:123456789012:task-definition/task-definition-1:1",
 					Tags: map[string]string{
 						"key-1": "value-1",
@@ -254,6 +255,7 @@ func Test_fetchTasksMetadata(t *testing.T) {
 				{
 					ARN:        "arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111",
 					ClusterARN: "arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1",
+					ServiceARN: "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1",
 					TaskDefARN: "arn:aws:ecs:us-east-1:123456789012:task-definition/task-definition-1:1",
 					Tags:       map[string]string{},
 				},
@@ -435,6 +437,61 @@ func Test_fetchServicesMetadata(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := fetchServicesMetadata(tt.args.client, tt.args.cluster, tt.args.services)
+			if (err != nil) != tt.wantErr {
+				assert.Error(t, err)
+			}
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_constructServiceARN(t *testing.T) {
+	type args struct {
+		clusterARN string
+		service    string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "successfully construct service arn from valid cluster arn",
+			args: args{
+				clusterARN: "arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1",
+				service:    "service-1",
+			},
+			want: "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1",
+		},
+		{
+			name: "return error when cluster arn is invalid",
+			args: args{
+				clusterARN: "invali:/d-arn",
+				service:    "service-1",
+			},
+			wantErr: true,
+		},
+		{
+			name: "return error when cluster arn is invalid",
+			args: args{
+				clusterARN: "arn:aws:ecs:us-east-1:123456789012:clustercluster-1",
+				service:    "service-1",
+			},
+			wantErr: true,
+		},
+		{
+			name: "return error when cluster arn is invalid",
+			args: args{
+				clusterARN: "arn:aws:ecs:::/",
+				service:    "service-1",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := constructServiceARN(tt.args.clusterARN, tt.args.service)
 			if (err != nil) != tt.wantErr {
 				assert.Error(t, err)
 			}
