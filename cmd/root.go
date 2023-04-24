@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/anchore/ecs-inventory/internal/config"
 	"github.com/anchore/ecs-inventory/pkg"
+	"github.com/anchore/ecs-inventory/pkg/reporter"
 )
 
 var ErrMissingDefaultConfigValue = fmt.Errorf("missing default config value")
@@ -40,20 +42,22 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// TODO(bradjones) Validate anchore connection details here
-		/*
-			if appConfig.AnchoreDetails.IsValid() {
-				dummyReport := inventory.Report{
-					Results: []inventory.ReportItem{},
-				}
-				err := reporter.Post(dummyReport, appConfig.AnchoreDetails, appConfig)
-				if err != nil {
-					log.Error("Failed to validate connection to Anchore", err)
-				}
-			} else {
-				log.Debug("Anchore details not specified, will not report inventory")
+		// Validate anchore connection & credentials, using a dummy report to post but this will be
+		// replaced in the future with a health check endpoint for the agents
+		if appConfig.AnchoreDetails.IsValid() {
+			dummyReport := reporter.Report{
+				ClusterName: "validating-creds",
+				Timestamp:   time.Now().UTC().Format(time.RFC3339),
 			}
-		*/
+			err := reporter.Post(dummyReport, appConfig.AnchoreDetails)
+			if err != nil {
+				log.Error("Failed to validate connection to Anchore", err)
+			} else {
+				log.Info("Successfully validated connection to Anchore")
+			}
+		} else {
+			log.Debug("Anchore details not specified, will not report inventory")
+		}
 
 		pkg.PeriodicallyGetInventoryReport(
 			appConfig.PollingIntervalSeconds,
