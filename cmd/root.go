@@ -12,6 +12,8 @@ import (
 	"github.com/anchore/ecs-inventory/pkg"
 )
 
+var ErrMissingDefaultConfigValue = fmt.Errorf("missing default config value")
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "anchore-ecs-inventory",
@@ -28,6 +30,15 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		log.Info("Starting anchore-ecs-inventory")
+
+		// Check required config values are present
+		if appConfig.Region == "" {
+			log.Error(
+				"AWS region not specified, please set the ANCHORE_ECS_INVENTORY_REGION environment variable, use the --region flag, or specify a region in the config file",
+				ErrMissingDefaultConfigValue,
+			)
+			os.Exit(1)
+		}
 
 		// TODO(bradjones) Validate anchore connection details here
 		/*
