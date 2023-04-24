@@ -5,6 +5,7 @@ type Report struct {
 	ClusterName string      `json:"cluster_name,omitempty"`
 	Containers  []Container `json:"containers,omitempty"`
 	Tasks       []Task      `json:"tasks,omitempty"`
+	Services    []Service   `json:"services,omitempty"`
 }
 
 type Container struct {

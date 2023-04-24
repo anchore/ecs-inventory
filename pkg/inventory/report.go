@@ -106,6 +106,20 @@ func GetInventoryReportForCluster(cluster string, ecsClient ecsiface.ECSAPI) (re
 		return reporter.Report{}, err
 	}
 
+	services, err := fetchServicesFromCluster(ecsClient, cluster)
+	if err != nil {
+		return reporter.Report{}, err
+	}
+	servicesMeta := []reporter.Service{}
+	if len(services) == 0 {
+		logger.Log.Debug("No services found in cluster", "cluster", cluster)
+	} else {
+		servicesMeta, err = fetchServicesMetadata(ecsClient, cluster, services)
+		if err != nil {
+			return reporter.Report{}, err
+		}
+	}
+
 	containers := []reporter.Container{}
 	taskMeta := []reporter.Task{}
 
@@ -132,5 +146,6 @@ func GetInventoryReportForCluster(cluster string, ecsClient ecsiface.ECSAPI) (re
 		ClusterName: cluster,
 		Containers:  containers,
 		Tasks:       taskMeta,
+		Services:    servicesMeta,
 	}, nil
 }
