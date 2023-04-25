@@ -10,12 +10,13 @@ import (
 	"github.com/anchore/ecs-inventory/internal/config"
 	"github.com/anchore/ecs-inventory/internal/logger"
 	"github.com/anchore/ecs-inventory/pkg"
+	pkgLog "github.com/anchore/ecs-inventory/pkg/logger"
 )
 
 var (
 	appConfig   *config.AppConfig
 	cliOnlyOpts config.CliOnlyOptions
-	log         logger.Logger
+	log         pkgLog.Logger
 )
 
 func init() {
@@ -60,7 +61,7 @@ func initLogging() {
 		FileLocation: appConfig.Log.FileLocation,
 	}
 
-	logger.InitLogger(logConfig)
+	logger.Log = logger.InitZapLogger(logConfig)
 	log = logger.Log
 	pkg.SetLogger(logger.Log)
 }

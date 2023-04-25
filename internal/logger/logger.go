@@ -5,29 +5,43 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/anchore/ecs-inventory/pkg/logger"
 )
 
-type Logger struct {
+type NoOpLogger struct{}
+
+func (log NoOpLogger) Debug(msg string, args ...interface{}) {}
+
+func (log NoOpLogger) Debugf(msg string, args ...interface{}) {}
+
+func (log NoOpLogger) Info(msg string, args ...interface{}) {}
+
+func (log NoOpLogger) Warn(msg string, args ...interface{}) {}
+
+func (log NoOpLogger) Error(msg string, err error, args ...interface{}) {}
+
+type ZapLogger struct {
 	zap *zap.SugaredLogger
 }
 
-func (log Logger) Debug(msg string, args ...interface{}) {
+func (log ZapLogger) Debug(msg string, args ...interface{}) {
 	log.zap.Debugw(msg, args...)
 }
 
-func (log Logger) Debugf(msg string, args ...interface{}) {
+func (log ZapLogger) Debugf(msg string, args ...interface{}) {
 	log.zap.Debugf(msg, args...)
 }
 
-func (log Logger) Info(msg string, args ...interface{}) {
+func (log ZapLogger) Info(msg string, args ...interface{}) {
 	log.zap.Infow(msg, args...)
 }
 
-func (log Logger) Warn(msg string, args ...interface{}) {
+func (log ZapLogger) Warn(msg string, args ...interface{}) {
 	log.zap.Warnw(msg, args...)
 }
 
-func (log Logger) Error(msg string, err error, args ...interface{}) {
+func (log ZapLogger) Error(msg string, err error, args ...interface{}) {
 	args = append(args, "err", err)
 
 	log.zap.Errorw(msg, args...)
@@ -38,9 +52,9 @@ type LogConfig struct {
 	FileLocation string
 }
 
-var Log Logger
+var Log logger.Logger = &NoOpLogger{}
 
-func InitLogger(logConfig LogConfig) {
+func InitZapLogger(logConfig LogConfig) *ZapLogger {
 	var cfg zap.Config
 
 	level, err := zap.ParseAtomicLevel(logConfig.Level)
@@ -69,7 +83,7 @@ func InitLogger(logConfig LogConfig) {
 		}
 	}
 
-	Log = Logger{
+	return &ZapLogger{
 		zap: zap.Must(cfg.Build()).Sugar(),
 	}
 }
