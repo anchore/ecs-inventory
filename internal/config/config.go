@@ -132,7 +132,7 @@ func (cfg *AppConfig) Build() error {
 		case v >= 2:
 			cfg.Log.Level = "debug"
 		default:
-			cfg.Log.Level = "error"
+			cfg.Log.Level = "info"
 		}
 	}
 

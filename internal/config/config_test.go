@@ -124,7 +124,7 @@ func TestDefaultValuesSuppliedForEmptyConfig(t *testing.T) {
 			ConfigPath: configPath,
 		},
 		Log: Logging{
-			Level: "error",
+			Level: "info",
 		},
 		AnchoreDetails: connection.AnchoreInfo{
 			Account:  "admin",
