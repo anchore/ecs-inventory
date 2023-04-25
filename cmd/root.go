@@ -46,8 +46,8 @@ var rootCmd = &cobra.Command{
 		// replaced in the future with a health check endpoint for the agents
 		if appConfig.AnchoreDetails.IsValid() {
 			dummyReport := reporter.Report{
-				ClusterName: "validating-creds",
-				Timestamp:   time.Now().UTC().Format(time.RFC3339),
+				ClusterARN: "validating-creds",
+				Timestamp:  time.Now().UTC().Format(time.RFC3339),
 			}
 			err := reporter.Post(dummyReport, appConfig.AnchoreDetails)
 			if err != nil {

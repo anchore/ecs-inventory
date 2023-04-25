@@ -21,7 +21,7 @@ const ReportAPIPath = "v1/enterprise/ecs-inventory"
 //
 //nolint:gosec
 func Post(report Report, anchoreDetails connection.AnchoreInfo) error {
-	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Posting Inventory Report for cluster %s", report.ClusterName))
+	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Posting Inventory Report for cluster %s", report.ClusterARN))
 	logger.Log.Info("Reporting results to Anchore", "Account", anchoreDetails.Account)
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: anchoreDetails.HTTP.Insecure},
