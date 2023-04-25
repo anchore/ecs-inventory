@@ -5,6 +5,7 @@ type Report struct {
 	ClusterName string      `json:"cluster_name,omitempty"`
 	Containers  []Container `json:"containers,omitempty"`
 	Tasks       []Task      `json:"tasks,omitempty"`
+	Services    []Service   `json:"services,omitempty"`
 }
 
 type Container struct {
@@ -20,4 +21,10 @@ type Task struct {
 	ServiceARN string            `json:"service_arn,omitempty"`
 	Tags       map[string]string `json:"tags,omitempty"`
 	TaskDefARN string            `json:"task_definition_arn,omitempty"`
+}
+
+type Service struct {
+	ARN        string            `json:"arn"`
+	ClusterARN string            `json:"cluster_arn,omitempty"`
+	Tags       map[string]string `json:"tags,omitempty"`
 }
