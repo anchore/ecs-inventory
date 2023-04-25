@@ -40,6 +40,7 @@ func TestLoadConfigFromFileCliConfigPath(t *testing.T) {
 		Region:                 "us-east-1",
 		PollingIntervalSeconds: 60,
 		Quiet:                  true,
+		Metadata:               true,
 	}
 
 	assert.EqualValues(t, expectedCfg, appCfg)
@@ -100,6 +101,7 @@ anchoredetails:
 region: ""
 quiet: false
 dryrun: false
+metadata: false
 `
 
 	assert.Equal(t, expected, config.String())
@@ -132,6 +134,7 @@ func TestDefaultValuesSuppliedForEmptyConfig(t *testing.T) {
 				TimeoutSeconds: 10,
 			},
 		},
+		Metadata: true,
 	}
 
 	assert.EqualValues(t, expectedCfg, appCfg)
