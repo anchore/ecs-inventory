@@ -100,29 +100,29 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 }
 
 // GetInventoryReportForCluster is an atomic method for getting in-use image results, for a cluster
-func GetInventoryReportForCluster(cluster string, ecsClient ecsiface.ECSAPI, metadata bool) (reporter.Report, error) {
-	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Getting Inventory Report for cluster: %s", cluster))
-	logger.Log.Debug("Found cluster", "cluster", cluster)
+func GetInventoryReportForCluster(clusterARN string, ecsClient ecsiface.ECSAPI, metadata bool) (reporter.Report, error) {
+	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Getting Inventory Report for cluster: %s", clusterARN))
+	logger.Log.Debug("Found cluster", "cluster", clusterARN)
 
 	report := reporter.Report{
-		Timestamp:   time.Now().UTC().Format(time.RFC3339),
-		ClusterName: cluster,
+		Timestamp:  time.Now().UTC().Format(time.RFC3339),
+		ClusterARN: clusterARN,
 	}
-	tasks, err := fetchTasksFromCluster(ecsClient, cluster)
+	tasks, err := fetchTasksFromCluster(ecsClient, clusterARN)
 	if err != nil {
 		return reporter.Report{}, err
 	}
 
 	if metadata {
 		servicesMeta := []reporter.Service{}
-		services, err := fetchServicesFromCluster(ecsClient, cluster)
+		services, err := fetchServicesFromCluster(ecsClient, clusterARN)
 		if err != nil {
 			return reporter.Report{}, err
 		}
 		if len(services) == 0 {
-			logger.Log.Debug("No services found in cluster", "cluster", cluster)
+			logger.Log.Debug("No services found in cluster", "cluster", clusterARN)
 		} else {
-			servicesMeta, err = fetchServicesMetadata(ecsClient, cluster, services)
+			servicesMeta, err = fetchServicesMetadata(ecsClient, clusterARN, services)
 			if err != nil {
 				return reporter.Report{}, err
 			}
@@ -132,24 +132,24 @@ func GetInventoryReportForCluster(cluster string, ecsClient ecsiface.ECSAPI, met
 
 	// Must be at least one task to continue
 	if len(tasks) == 0 {
-		logger.Log.Debug("No tasks found in cluster", "cluster", cluster)
+		logger.Log.Debug("No tasks found in cluster", "cluster", clusterARN)
 	} else {
-		logger.Log.Debug("Found tasks in cluster", "cluster", cluster, "taskCount", len(tasks))
+		logger.Log.Debug("Found tasks in cluster", "cluster", clusterARN, "taskCount", len(tasks))
 
 		if metadata {
-			taskMeta, err := fetchTasksMetadata(ecsClient, cluster, tasks)
+			taskMeta, err := fetchTasksMetadata(ecsClient, clusterARN, tasks)
 			if err != nil {
 				return reporter.Report{}, err
 			}
 			report.Tasks = taskMeta
 		}
 
-		containers, err := fetchContainersFromTasks(ecsClient, cluster, tasks)
+		containers, err := fetchContainersFromTasks(ecsClient, clusterARN, tasks)
 		if err != nil {
 			return reporter.Report{}, err
 		}
 		report.Containers = containers
-		logger.Log.Info("Found containers in cluster", "cluster", cluster, "containerCount", len(containers))
+		logger.Log.Info("Found containers in cluster", "cluster", clusterARN, "containerCount", len(containers))
 	}
 
 	return report, nil

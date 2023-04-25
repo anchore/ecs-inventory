@@ -245,7 +245,6 @@ func Test_fetchTasksMetadata(t *testing.T) {
 			want: []reporter.Task{
 				{
 					ARN:        "arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000",
-					ClusterARN: "arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1",
 					ServiceARN: "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1",
 					TaskDefARN: "arn:aws:ecs:us-east-1:123456789012:task-definition/task-definition-1:1",
 					Tags: map[string]string{
@@ -255,7 +254,6 @@ func Test_fetchTasksMetadata(t *testing.T) {
 				},
 				{
 					ARN:        "arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111",
-					ClusterARN: "arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1",
 					ServiceARN: "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1",
 					TaskDefARN: "arn:aws:ecs:us-east-1:123456789012:task-definition/task-definition-1:1",
 					Tags:       map[string]string{},
@@ -420,17 +418,15 @@ func Test_fetchServicesMetadata(t *testing.T) {
 			},
 			want: []reporter.Service{
 				{
-					ARN:        "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1",
-					ClusterARN: "arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1",
+					ARN: "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1",
 					Tags: map[string]string{
 						"svc-key-1": "svc-value-1",
 						"svc-key-2": "svc-value-2",
 					},
 				},
 				{
-					ARN:        "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2",
-					ClusterARN: "arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1",
-					Tags:       map[string]string{},
+					ARN:  "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2",
+					Tags: map[string]string{},
 				},
 			},
 		},
