@@ -9,20 +9,20 @@ import (
 )
 
 func TestLoggerInit(t *testing.T) {
-	assert.Nil(t, Log.zap)
+	assert.Equal(t, Log, &NoOpLogger{})
 
-	InitLogger(LogConfig{Level: "info", FileLocation: ""})
+	zapLogger := InitZapLogger(LogConfig{Level: "info", FileLocation: ""})
 
-	assert.NotNil(t, Log.zap)
+	assert.NotNil(t, zapLogger.zap)
 }
 
 func TestLogsToFileIfFileLocationProvided(t *testing.T) {
 	tmpDir := t.TempDir()
 	fileLocation := path.Join(tmpDir, "log")
 
-	InitLogger(LogConfig{Level: "info", FileLocation: fileLocation})
+	Log = InitZapLogger(LogConfig{Level: "info", FileLocation: fileLocation})
 
-	var expectedLogMsg = "test log foobar"
+	expectedLogMsg := "test log foobar"
 	Log.Info(expectedLogMsg)
 
 	b, err := os.ReadFile(fileLocation)
@@ -35,7 +35,7 @@ func TestLogsToFileIfFileLocationProvided(t *testing.T) {
 }
 
 func TestLoggerDefaultsToInfoLevelOnInvalidLevel(t *testing.T) {
-	InitLogger(LogConfig{Level: "invalid", FileLocation: ""})
+	zapLogger := InitZapLogger(LogConfig{Level: "invalid", FileLocation: ""})
 
-	assert.Equal(t, Log.zap.Level().String(), "info")
+	assert.Equal(t, zapLogger.zap.Level().String(), "info")
 }
