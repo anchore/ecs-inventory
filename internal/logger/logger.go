@@ -11,15 +11,15 @@ import (
 
 type NoOpLogger struct{}
 
-func (log NoOpLogger) Debug(msg string, args ...interface{}) {}
+func (log NoOpLogger) Debug(string, ...interface{}) {}
 
-func (log NoOpLogger) Debugf(msg string, args ...interface{}) {}
+func (log NoOpLogger) Debugf(string, ...interface{}) {}
 
-func (log NoOpLogger) Info(msg string, args ...interface{}) {}
+func (log NoOpLogger) Info(string, ...interface{}) {}
 
-func (log NoOpLogger) Warn(msg string, args ...interface{}) {}
+func (log NoOpLogger) Warn(string, ...interface{}) {}
 
-func (log NoOpLogger) Error(msg string, err error, args ...interface{}) {}
+func (log NoOpLogger) Error(string, error, ...interface{}) {}
 
 type ZapLogger struct {
 	zap *zap.SugaredLogger
