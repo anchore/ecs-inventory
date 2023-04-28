@@ -50,8 +50,10 @@ func Post(report Report, anchoreDetails connection.AnchoreInfo) error {
 	req.Header.Set("x-anchore-account", anchoreDetails.Account)
 	resp, err := client.Do(req)
 	if err != nil {
-		if resp.StatusCode == 401 {
-			return fmt.Errorf("failed to report data to Anchore, check credentials: %w", err)
+		if resp != nil {
+			if resp.StatusCode == 401 {
+				return fmt.Errorf("failed to report data to Anchore, check credentials: %w", err)
+			}
 		}
 		return fmt.Errorf("failed to report data to Anchore: %w", err)
 	}
