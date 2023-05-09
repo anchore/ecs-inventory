@@ -19,6 +19,8 @@ func (log NoOpLogger) Info(string, ...interface{}) {}
 
 func (log NoOpLogger) Warn(string, ...interface{}) {}
 
+func (log NoOpLogger) Warnf(string, ...interface{}) {}
+
 func (log NoOpLogger) Error(string, error, ...interface{}) {}
 
 type ZapLogger struct {
@@ -39,6 +41,10 @@ func (log ZapLogger) Info(msg string, args ...interface{}) {
 
 func (log ZapLogger) Warn(msg string, args ...interface{}) {
 	log.zap.Warnw(msg, args...)
+}
+
+func (log ZapLogger) Warnf(msg string, args ...interface{}) {
+	log.zap.Warnf(msg, args...)
 }
 
 func (log ZapLogger) Error(msg string, err error, args ...interface{}) {
