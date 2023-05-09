@@ -38,9 +38,8 @@ type AppConfig struct {
 	PollingIntervalSeconds int                    `mapstructure:"polling-interval-seconds"`
 	AnchoreDetails         connection.AnchoreInfo `mapstructure:"anchore"`
 	Region                 string                 `mapstructure:"region"`
-	Quiet                  bool                   `mapstructure:"quiet"`    // if true do not log the inventory report to stdout
-	DryRun                 bool                   `mapstructure:"dry-run"`  // if true do not report inventory to Anchore
-	Metadata               bool                   `mapstructure:"metadata"` // if true, include runtime metadata in the inventory report
+	Quiet                  bool                   `mapstructure:"quiet"`   // if true do not log the inventory report to stdout
+	DryRun                 bool                   `mapstructure:"dry-run"` // if true do not report inventory to Anchore
 }
 
 // Logging Configuration
@@ -65,7 +64,6 @@ var DefaultConfigValues = AppConfig{
 	PollingIntervalSeconds: 300,
 	Quiet:                  false,
 	DryRun:                 false,
-	Metadata:               true,
 }
 
 var ErrConfigFileNotFound = fmt.Errorf("application config file not found")
@@ -76,7 +74,6 @@ func setDefaultValues(v *viper.Viper) {
 	v.SetDefault("anchore.account", DefaultConfigValues.AnchoreDetails.Account)
 	v.SetDefault("anchore.http.insecure", DefaultConfigValues.AnchoreDetails.HTTP.Insecure)
 	v.SetDefault("anchore.http.timeout-seconds", DefaultConfigValues.AnchoreDetails.HTTP.TimeoutSeconds)
-	v.SetDefault("metadata", DefaultConfigValues.Metadata)
 }
 
 // Load the Application Configuration from the Viper specifications

@@ -89,9 +89,6 @@ region: $ANCHORE_ECS_INVENTORY_REGION
 polling-interval-seconds: 300
 
 quiet: false
-
-# collect additional metadata about where a container is running (service/task metadata including tags). [defaults to true]
-metadata: true
 ```
 
 You can also override any configuration value with environment variables. They

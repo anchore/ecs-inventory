@@ -47,7 +47,7 @@ func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo,
 	return nil
 }
 
-func GetInventoryReportsForRegion(region string, anchoreDetails connection.AnchoreInfo, quiet, dryRun, metadata bool) error {
+func GetInventoryReportsForRegion(region string, anchoreDetails connection.AnchoreInfo, quiet, dryRun bool) error {
 	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Getting Inventory Reports for region: %s", region))
 	logger.Log.Info("Getting Inventory Reports for region", "region", region)
 	sessConfig := &aws.Config{}
@@ -80,7 +80,7 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 
 			ecsClient := ecs.New(sess)
 
-			report, err := GetInventoryReportForCluster(cluster, ecsClient, metadata)
+			report, err := GetInventoryReportForCluster(cluster, ecsClient)
 			if err != nil {
 				logger.Log.Error("Failed to get inventory report for cluster", err)
 			}
@@ -100,7 +100,7 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 }
 
 // GetInventoryReportForCluster is an atomic method for getting in-use image results, for a cluster
-func GetInventoryReportForCluster(clusterARN string, ecsClient ecsiface.ECSAPI, metadata bool) (reporter.Report, error) {
+func GetInventoryReportForCluster(clusterARN string, ecsClient ecsiface.ECSAPI) (reporter.Report, error) {
 	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Getting Inventory Report for cluster: %s", clusterARN))
 	logger.Log.Debug("Found cluster", "cluster", clusterARN)
 
@@ -113,22 +113,20 @@ func GetInventoryReportForCluster(clusterARN string, ecsClient ecsiface.ECSAPI, 
 		return reporter.Report{}, err
 	}
 
-	if metadata {
-		servicesMeta := []reporter.Service{}
-		services, err := fetchServicesFromCluster(ecsClient, clusterARN)
+	servicesMeta := []reporter.Service{}
+	services, err := fetchServicesFromCluster(ecsClient, clusterARN)
+	if err != nil {
+		return reporter.Report{}, err
+	}
+	if len(services) == 0 {
+		logger.Log.Debug("No services found in cluster", "cluster", clusterARN)
+	} else {
+		servicesMeta, err = fetchServicesMetadata(ecsClient, clusterARN, services)
 		if err != nil {
 			return reporter.Report{}, err
 		}
-		if len(services) == 0 {
-			logger.Log.Debug("No services found in cluster", "cluster", clusterARN)
-		} else {
-			servicesMeta, err = fetchServicesMetadata(ecsClient, clusterARN, services)
-			if err != nil {
-				return reporter.Report{}, err
-			}
-		}
-		report.Services = servicesMeta
 	}
+	report.Services = servicesMeta
 
 	// Must be at least one task to continue
 	if len(tasks) == 0 {
@@ -136,13 +134,11 @@ func GetInventoryReportForCluster(clusterARN string, ecsClient ecsiface.ECSAPI, 
 	} else {
 		logger.Log.Debug("Found tasks in cluster", "cluster", clusterARN, "taskCount", len(tasks))
 
-		if metadata {
-			taskMeta, err := fetchTasksMetadata(ecsClient, clusterARN, tasks)
-			if err != nil {
-				return reporter.Report{}, err
-			}
-			report.Tasks = taskMeta
+		taskMeta, err := fetchTasksMetadata(ecsClient, clusterARN, tasks)
+		if err != nil {
+			return reporter.Report{}, err
 		}
+		report.Tasks = taskMeta
 
 		containers, err := fetchContainersFromTasks(ecsClient, clusterARN, tasks)
 		if err != nil {
