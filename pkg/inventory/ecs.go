@@ -86,7 +86,7 @@ func fetchContainersFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*s
 			if container.ImageDigest != nil {
 				digest = *container.ImageDigest
 			} else {
-				logger.Log.Warn("No image digest found for container: %s", *container.ContainerArn)
+				logger.Log.Warnf("No image digest found for container: %s", *container.ContainerArn)
 				logger.Log.Warn("Ensure all ECS container hosts are running at least ECS Agent 1.70.0, which fixed a bug where image digests were not returned in the DescribeTasks API response.")
 			}
 			containers = append(containers, reporter.Container{
