@@ -65,7 +65,6 @@ var rootCmd = &cobra.Command{
 			appConfig.Region,
 			appConfig.Quiet,
 			appConfig.DryRun,
-			appConfig.Metadata,
 		)
 	},
 }

@@ -10,7 +10,7 @@ import (
 func TestGetInventoryReportForCluster(t *testing.T) {
 	mockSvc := &mockECSClient{}
 
-	report, err := GetInventoryReportForCluster("cluster-1", mockSvc, true)
+	report, err := GetInventoryReportForCluster("cluster-1", mockSvc)
 
 	assert.NoError(t, err)
 	fmt.Println(report)
