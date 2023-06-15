@@ -101,6 +101,55 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 	return nil
 }
 
+// ensures that the referenced objects in the report exist, and if not, creates them.
+// e.g. if a service is referenced in a task, but the service is not present in the report, create the service with minimal metadata
+func ensureReferencedObjectsExist(report reporter.Report) reporter.Report {
+	updatedReport := report
+
+	serviceARNs := map[string]bool{}
+	for _, service := range report.Services {
+		serviceARNs[service.ARN] = true
+	}
+
+	taskARNs := map[string]bool{}
+	for _, task := range report.Tasks {
+		taskARNs[task.ARN] = true
+	}
+
+	// Ensure all services referenced in tasks exist in the report
+	for _, task := range report.Tasks {
+		if _, ok := serviceARNs[task.ServiceARN]; !ok {
+			// Service not present in report, create it
+			updatedReport.Services = append(updatedReport.Services, reporter.Service{
+				ARN: task.ServiceARN,
+			})
+			logger.Log.Warn(
+				"Service referenced in task not present in report, adding minimal service to report",
+				"service",
+				task.ServiceARN,
+			)
+		}
+	}
+
+	// Ensure all tasks referenced in containers exist in the report
+	for _, container := range report.Containers {
+		if _, ok := taskARNs[container.TaskARN]; !ok {
+			// Task not present in report, create it
+			updatedReport.Tasks = append(updatedReport.Tasks, reporter.Task{
+				ARN:        container.TaskARN,
+				TaskDefARN: "UNKNOWN", // NOTE TaskDefARN is not a nullable field in the db, so we need to provide a value
+			})
+			logger.Log.Warn(
+				"Task referenced in container not present in report, adding minimal task to report",
+				"task",
+				container.TaskARN,
+			)
+		}
+	}
+
+	return updatedReport
+}
+
 // GetInventoryReportForCluster is an atomic method for getting in-use image results, for a cluster
 func GetInventoryReportForCluster(clusterARN string, ecsClient ecsiface.ECSAPI) (reporter.Report, error) {
 	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Getting Inventory Report for cluster: %s", clusterARN))
@@ -150,5 +199,5 @@ func GetInventoryReportForCluster(clusterARN string, ecsClient ecsiface.ECSAPI) 
 		logger.Log.Info("Found containers in cluster", "cluster", clusterARN, "containerCount", len(containers))
 	}
 
-	return report, nil
+	return ensureReferencedObjectsExist(report), nil
 }
