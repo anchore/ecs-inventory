@@ -90,6 +90,8 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 				err = HandleReport(report, anchoreDetails, quiet, dryRun)
 				if err != nil {
 					logger.Log.Error("Failed to report inventory for cluster", err)
+					jsonReport, _ := json.Marshal(report)
+					logger.Log.Error("Failed payload", fmt.Errorf("report %s", jsonReport))
 				}
 			}
 		}(*cluster)
