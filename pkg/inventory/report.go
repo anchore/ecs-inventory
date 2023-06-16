@@ -90,6 +90,8 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 				err = HandleReport(report, anchoreDetails, quiet, dryRun)
 				if err != nil {
 					logger.Log.Error("Failed to report inventory for cluster", err)
+					jsonReport, _ := json.Marshal(report)
+					logger.Log.Error("Failed payload", fmt.Errorf("report %s", jsonReport))
 				}
 			}
 		}(*cluster)
@@ -97,6 +99,78 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 
 	wg.Wait()
 	return nil
+}
+
+// ensures that the referenced objects in the report exist, and if not, creates them.
+// e.g. if a service is referenced in a task, but the service is not present in the report, create the service with minimal metadata
+//
+// NOTE: in the future, this can be removed if the enterprise API is updated to accept reports with missing objects and create them on
+// the server side
+func ensureReferencedObjectsExist(report reporter.Report) reporter.Report {
+	updatedReport := report
+
+	serviceARNs := map[string]bool{}
+	for _, service := range report.Services {
+		serviceARNs[service.ARN] = true
+	}
+
+	taskARNs := map[string]bool{}
+	for _, task := range report.Tasks {
+		taskARNs[task.ARN] = true
+	}
+
+	// Ensure all services referenced in tasks exist in the report
+	for _, task := range report.Tasks {
+		if task.ServiceARN != "" {
+			if _, ok := serviceARNs[task.ServiceARN]; !ok {
+				// Service not present in report, create it
+				updatedReport.Services = append(updatedReport.Services, reporter.Service{
+					ARN: task.ServiceARN,
+				})
+				logger.Log.Warn(
+					"Service referenced in task not present in report, adding minimal service to report",
+					"service",
+					task.ServiceARN,
+				)
+			}
+		}
+	}
+
+	// Ensure all tasks referenced in containers exist in the report
+	for _, container := range report.Containers {
+		if _, ok := taskARNs[container.TaskARN]; !ok {
+			// Task not present in report, create it
+			updatedReport.Tasks = append(updatedReport.Tasks, reporter.Task{
+				ARN:        container.TaskARN,
+				TaskDefARN: "UNKNOWN", // NOTE TaskDefARN is not a nullable field in the db, so we need to provide a value
+				ServiceARN: "",
+			})
+			logger.Log.Warn(
+				"Task referenced in container not present in report, adding minimal task to report",
+				"task",
+				container.TaskARN,
+			)
+		}
+	}
+
+	// If the report has services, ensure tasks that are not part of a service reference an "UNKNOWN" placeholder service
+	// so the enterprise API will accept the report
+	addUnknownService := false
+	if len(report.Services) > 0 {
+		for i, task := range updatedReport.Tasks {
+			if task.ServiceARN == "" {
+				updatedReport.Tasks[i].ServiceARN = "UNKNOWN"
+				if !addUnknownService {
+					updatedReport.Services = append(updatedReport.Services, reporter.Service{
+						ARN: "UNKNOWN",
+					})
+					addUnknownService = true
+				}
+			}
+		}
+	}
+
+	return updatedReport
 }
 
 // GetInventoryReportForCluster is an atomic method for getting in-use image results, for a cluster
@@ -148,5 +222,5 @@ func GetInventoryReportForCluster(clusterARN string, ecsClient ecsiface.ECSAPI) 
 		logger.Log.Info("Found containers in cluster", "cluster", clusterARN, "containerCount", len(containers))
 	}
 
-	return report, nil
+	return ensureReferencedObjectsExist(report), nil
 }

@@ -54,6 +54,7 @@ func fetchTasksFromCluster(client ecsiface.ECSAPI, cluster string) ([]*string, e
 }
 
 func fetchServicesFromCluster(client ecsiface.ECSAPI, cluster string) ([]*string, error) {
+	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Fetching services from cluster: %s", cluster))
 	input := &ecs.ListServicesInput{
 		Cluster: aws.String(cluster),
 	}
