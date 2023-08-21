@@ -56,7 +56,7 @@ var rootCmd = &cobra.Command{
 				log.Info("Successfully validated connection to Anchore")
 			}
 		} else {
-			log.Debug("Anchore details not specified, will not report inventory")
+			log.Warn("Anchore details not specified, will not report inventory")
 		}
 
 		pkg.PeriodicallyGetInventoryReport(

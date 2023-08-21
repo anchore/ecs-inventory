@@ -38,7 +38,7 @@ func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo,
 			return fmt.Errorf("unable to report Inventory to Anchore: %w", err)
 		}
 	default:
-		logger.Log.Debug("Anchore details not specified, not reporting inventory")
+		logger.Log.Warn("Anchore details not specified, not reporting inventory")
 	}
 
 	if !quiet {
