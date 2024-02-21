@@ -129,7 +129,7 @@ func TestDefaultValuesSuppliedForEmptyConfig(t *testing.T) {
 			Password: "",
 			HTTP: connection.HTTPConfig{
 				Insecure:       false,
-				TimeoutSeconds: 10,
+				TimeoutSeconds: 60,
 			},
 		},
 	}
