@@ -57,7 +57,7 @@ var DefaultConfigValues = AppConfig{
 		Account: "admin",
 		HTTP: connection.HTTPConfig{
 			Insecure:       false,
-			TimeoutSeconds: 10,
+			TimeoutSeconds: 60,
 		},
 	},
 	Region:                 "",

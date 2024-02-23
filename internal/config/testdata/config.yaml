@@ -9,7 +9,7 @@ anchore:
   account: admin
   http:
     insecure: false
-    timeout: 10
+    timeout-seconds: 10
 
 region: "us-east-1"
 
