@@ -3,6 +3,7 @@ package inventory
 import (
 	"testing"
 
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 	"github.com/stretchr/testify/assert"
 
@@ -492,6 +493,67 @@ func Test_constructServiceARN(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				assert.Error(t, err)
 			}
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_getContainerImageTag(t *testing.T) {
+	type args struct {
+		containerTagMap map[string]string
+		container       *ecs.Container
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "return container image tag when it does not contain @ symbol",
+			args: args{
+				containerTagMap: map[string]string{
+					"sha256:1234567890123456789012345678901234567890123456789012345678901111": "image-1:latest",
+					"sha256:1234567890123456789012345678901234567890123456789012345678902222": "image-2:latest",
+				},
+				container: &ecs.Container{
+					Image:       GetPointerToValue("image-1:latest"),
+					ImageDigest: GetPointerToValue("sha256:1234567890123456789012345678901234567890123456789012345678901111"),
+				},
+			},
+			want: "image-1:latest",
+		},
+		{
+			name: "return container image tag from map when it does contain @ symbol",
+			args: args{
+				containerTagMap: map[string]string{
+					"sha256:1234567890123456789012345678901234567890123456789012345678901111": "image-1:latest",
+					"sha256:1234567890123456789012345678901234567890123456789012345678902222": "image-2:latest",
+				},
+				container: &ecs.Container{
+					Image:       GetPointerToValue("image-1@sha256:1234567890123456789012345678901234567890123456789012345678901111"),
+					ImageDigest: GetPointerToValue("sha256:1234567890123456789012345678901234567890123456789012345678901111"),
+				},
+			},
+			want: "image-1:latest",
+		},
+		{
+			name: "return UNKNOWN as the tag when image tag is not found in the map",
+			args: args{
+				containerTagMap: map[string]string{
+					"sha256:1234567890123456789012345678901234567890123456789012345678901111": "image-1:latest",
+					"sha256:1234567890123456789012345678901234567890123456789012345678902222": "image-2:latest",
+				},
+				container: &ecs.Container{
+					Image:       GetPointerToValue("image-1@sha256:0000"),
+					ImageDigest: GetPointerToValue("sha256:11"),
+				},
+			},
+			want: "image-1:UNKNOWN",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getContainerImageTag(tt.args.containerTagMap, tt.args.container)
 			assert.Equal(t, tt.want, got)
 		})
 	}
