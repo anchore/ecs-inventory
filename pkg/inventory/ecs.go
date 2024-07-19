@@ -89,16 +89,10 @@ func fetchContainersFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*s
 				logger.Log.Warnf("No image digest found for container: %s", *container.ContainerArn)
 				logger.Log.Warn("Ensure all ECS container hosts are running at least ECS Agent 1.70.0, which fixed a bug where image digests were not returned in the DescribeTasks API response.")
 			}
-			// Fix container image tag if it contains an @ symbol
-			if strings.Contains(*container.Image, "@") {
-				if tag, ok := containerTagMap[digest]; ok {
-					// replace the image tag with the correct one
-					container.Image = &tag
-				}
-			}
+			containerImage := getContainerImageTag(containerTagMap, container)
 			containers = append(containers, reporter.Container{
 				ARN:         *container.ContainerArn,
-				ImageTag:    *container.Image,
+				ImageTag:    containerImage,
 				ImageDigest: digest,
 				TaskARN:     *task.TaskArn,
 			})
@@ -106,6 +100,19 @@ func fetchContainersFromTasks(client ecsiface.ECSAPI, cluster string, tasks []*s
 	}
 
 	return containers, nil
+}
+
+func getContainerImageTag(containerTagMap map[string]string, container *ecs.Container) string {
+	// Fix container image tag if it contains an @ symbol
+	if strings.Contains(*container.Image, "@") {
+		// replace the image tag with the correct one
+		if tag, ok := containerTagMap[*container.ImageDigest]; ok {
+			return tag
+		}
+		logger.Log.Warnf("No image tag found for container setting to UNKNOWN: %s", *container.Image)
+		return strings.Split(*container.Image, "@")[0] + ":UNKNOWN"
+	}
+	return *container.Image
 }
 
 // Build a map of container image digests to image tags
