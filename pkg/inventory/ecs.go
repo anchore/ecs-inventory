@@ -123,7 +123,9 @@ func buildContainerTagMap(tasks []*ecs.Task) map[string]string {
 			// check if the container tag consists of an @ symbol
 			if !strings.Contains(*container.Image, "@") {
 				// Good tag image, store map
-				containerMap[*container.ImageDigest] = *container.Image
+				if container.ImageDigest != nil {
+					containerMap[*container.ImageDigest] = *container.Image
+				}
 			}
 		}
 	}
