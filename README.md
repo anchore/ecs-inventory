@@ -95,3 +95,17 @@ You can also override any configuration value with environment variables. They
 must be prefixed with `ANCHORE_ECS_INVENTORY_` and be in all caps. For example,
 `ANCHORE_ECS_INVENTORY_LOG_LEVEL=error` would override the `log.level`
 configuration
+
+## Releasing
+To create a release of `anchore-ecs-inventory`, a tag needs to be created that points to a commit in `main`
+that we want to release. This tag shall be a semver prefixed with a `v`, e.g. `v0.2.7`.
+Once pushed to origin, this will trigger a GitHub Action that will create the release.
+
+```sh
+git tag -s -a v0.2.7 -m "v0.2.7"
+git push origin v0.2.7
+```
+
+After the release has been successfully created, make sure to specify the updated version
+in the `ecs-inventory` Helm Chart in [anchore-charts](https://github.com/anchore/anchore-charts). 
+The files to edit are `Chart.yaml` and `values.yaml`.
