@@ -1,5 +1,7 @@
 # Anchore ECS Inventory
 
+> **Note: this integration requires a valid license or subscription entitlement from Anchore**
+
 `anchore-ecs-inventory` is a tool to gather an inventory of images in use by
 Amazon Elastic Container Service (ECS).
 
