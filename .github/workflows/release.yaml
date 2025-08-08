@@ -40,7 +40,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # This check name is defined as the github actions job name (in .github/workflows/static-analysis.yaml)
-          checkName: "Static-Analysis (1.22.x, ubuntu-latest)"
+          checkName: "Static-Analysis (1.24.x, ubuntu-latest)"
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Check unit test results
@@ -49,7 +49,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # This check name is defined as the github actions job name (in .github/workflows/unit-test.yaml)
-          checkName: "Unit-Tests (1.22.x, ubuntu-latest)"
+          checkName: "Unit-Tests (1.24.x, ubuntu-latest)"
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Quality gate
