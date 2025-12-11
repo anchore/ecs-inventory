@@ -1,6 +1,7 @@
 package inventory
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,7 +12,7 @@ import (
 func TestGetInventoryReportForCluster(t *testing.T) {
 	mockSvc := &mockECSClient{}
 
-	report, err := GetInventoryReportForCluster("cluster-1", mockSvc)
+	report, err := GetInventoryReportForCluster(context.Background(), "cluster-1", mockSvc)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 4, len(report.Containers))

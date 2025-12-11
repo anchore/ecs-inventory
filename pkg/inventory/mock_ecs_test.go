@@ -1,15 +1,15 @@
 package inventory
 
 import (
+	"context"
 	"errors"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	ecs "github.com/aws/aws-sdk-go-v2/service/ecs"
+	ecstypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
 
 type mockECSClient struct {
-	ecsiface.ECSAPI
 	ErrorOnListCluster         bool
 	ErrorOnListTasks           bool
 	ErrorOnListServices        bool
@@ -18,51 +18,51 @@ type mockECSClient struct {
 	ErrorOnDescribeServices    bool
 }
 
-func (m *mockECSClient) ListClusters(*ecs.ListClustersInput) (*ecs.ListClustersOutput, error) {
+func (m *mockECSClient) ListClusters(ctx context.Context, _ *ecs.ListClustersInput, _ ...func(*ecs.Options)) (*ecs.ListClustersOutput, error) {
 	if m.ErrorOnListCluster {
 		return nil, errors.New("list cluster error")
 	}
 	return &ecs.ListClustersOutput{
-		ClusterArns: []*string{
-			aws.String("arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1"),
-			aws.String("arn:aws:ecs:us-east-1:123456789012:cluster/cluster-2"),
+		ClusterArns: []string{
+			"arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1",
+			"arn:aws:ecs:us-east-1:123456789012:cluster/cluster-2",
 		},
 	}, nil
 }
 
-func (m *mockECSClient) ListTasks(*ecs.ListTasksInput) (*ecs.ListTasksOutput, error) {
+func (m *mockECSClient) ListTasks(ctx context.Context, _ *ecs.ListTasksInput, _ ...func(*ecs.Options)) (*ecs.ListTasksOutput, error) {
 	if m.ErrorOnListTasks {
 		return nil, errors.New("list tasks error")
 	}
 	return &ecs.ListTasksOutput{
-		TaskArns: []*string{
-			aws.String("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000"),
-			aws.String("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111"),
+		TaskArns: []string{
+			"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000",
+			"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111",
 		},
 	}, nil
 }
 
-func (m *mockECSClient) ListServices(*ecs.ListServicesInput) (*ecs.ListServicesOutput, error) {
+func (m *mockECSClient) ListServices(ctx context.Context, _ *ecs.ListServicesInput, _ ...func(*ecs.Options)) (*ecs.ListServicesOutput, error) {
 	if m.ErrorOnListServices {
 		return nil, errors.New("list services error")
 	}
 	return &ecs.ListServicesOutput{
-		ServiceArns: []*string{
-			aws.String("arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1"),
-			aws.String("arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2"),
+		ServiceArns: []string{
+			"arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1",
+			"arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2",
 		},
 	}, nil
 }
 
-func (m *mockECSClient) DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.DescribeTasksOutput, error) {
+func (m *mockECSClient) DescribeTasks(ctx context.Context, input *ecs.DescribeTasksInput, _ ...func(*ecs.Options)) (*ecs.DescribeTasksOutput, error) {
 	if m.ErrorOnDescribeTasks {
 		return nil, errors.New("describe tasks error")
 	}
-	tasks := []*ecs.Task{}
+	tasks := []ecstypes.Task{}
 	for _, t := range input.Tasks {
-		switch *t {
+		switch t {
 		case "arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000":
-			tasks = append(tasks, &ecs.Task{
+			tasks = append(tasks, ecstypes.Task{
 				TaskArn: aws.String(
 					"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000",
 				),
@@ -71,7 +71,7 @@ func (m *mockECSClient) DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.Descr
 					"arn:aws:ecs:us-east-1:123456789012:task-definition/task-definition-1:1",
 				),
 				Group: aws.String("service:service-1"),
-				Containers: []*ecs.Container{
+				Containers: []ecstypes.Container{
 					{
 						ContainerArn: aws.String(
 							"arn:aws:ecs:us-east-1:123456789012:container/12345678-1234-1234-1234-111111111111",
@@ -91,7 +91,7 @@ func (m *mockECSClient) DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.Descr
 				},
 			})
 		case "arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111":
-			tasks = append(tasks, &ecs.Task{
+			tasks = append(tasks, ecstypes.Task{
 				TaskArn: aws.String(
 					"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111",
 				),
@@ -100,7 +100,7 @@ func (m *mockECSClient) DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.Descr
 					"arn:aws:ecs:us-east-1:123456789012:task-definition/task-definition-1:1",
 				),
 				Group: aws.String("service:service-1"),
-				Containers: []*ecs.Container{
+				Containers: []ecstypes.Container{
 					{
 						ContainerArn: aws.String(
 							"arn:aws:ecs:us-east-1:123456789012:container/12345678-1234-1234-1234-111111111113",
@@ -125,14 +125,14 @@ func (m *mockECSClient) DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.Descr
 	return &ecs.DescribeTasksOutput{Tasks: tasks}, nil
 }
 
-func (m *mockECSClient) ListTagsForResource(input *ecs.ListTagsForResourceInput) (*ecs.ListTagsForResourceOutput, error) {
+func (m *mockECSClient) ListTagsForResource(ctx context.Context, input *ecs.ListTagsForResourceInput, _ ...func(*ecs.Options)) (*ecs.ListTagsForResourceOutput, error) {
 	if m.ErrorOnListTagsForResource {
 		return nil, errors.New("list tags for resource error")
 	}
 	switch *input.ResourceArn {
 	case "arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000":
 		return &ecs.ListTagsForResourceOutput{
-			Tags: []*ecs.Tag{
+			Tags: []ecstypes.Tag{
 				{
 					Key:   aws.String("key-1"),
 					Value: aws.String("value-1"),
@@ -145,7 +145,7 @@ func (m *mockECSClient) ListTagsForResource(input *ecs.ListTagsForResourceInput)
 		}, nil
 	case "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1":
 		return &ecs.ListTagsForResourceOutput{
-			Tags: []*ecs.Tag{
+			Tags: []ecstypes.Tag{
 				{
 					Key:   aws.String("svc-key-1"),
 					Value: aws.String("svc-value-1"),
@@ -161,23 +161,23 @@ func (m *mockECSClient) ListTagsForResource(input *ecs.ListTagsForResourceInput)
 	}
 }
 
-func (m *mockECSClient) DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error) {
+func (m *mockECSClient) DescribeServices(ctx context.Context, input *ecs.DescribeServicesInput, _ ...func(*ecs.Options)) (*ecs.DescribeServicesOutput, error) {
 	if m.ErrorOnDescribeServices {
 		return nil, errors.New("describe services error")
 	}
 
-	services := []*ecs.Service{}
+	services := []ecstypes.Service{}
 	for _, s := range input.Services {
-		switch *s {
+		switch s {
 		case "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1":
-			services = append(services, &ecs.Service{
+			services = append(services, ecstypes.Service{
 				ServiceArn: aws.String(
 					"arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1",
 				),
 				ClusterArn: aws.String("arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1"),
 			})
 		case "arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2":
-			services = append(services, &ecs.Service{
+			services = append(services, ecstypes.Service{
 				ServiceArn: aws.String(
 					"arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2",
 				),
