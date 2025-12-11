@@ -1,26 +1,24 @@
 package inventory
 
 import (
+	"context"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	ecstypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/anchore/ecs-inventory/pkg/reporter"
 )
 
-// Return a pointer to the passed value
-func GetPointerToValue[T any](t T) *T { return &t }
-
 func Test_fetchClusters(t *testing.T) {
 	type args struct {
-		client ecsiface.ECSAPI
+		client ECSAPI
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    []*string
+		want    []string
 		wantErr bool
 	}{
 		{
@@ -37,15 +35,15 @@ func Test_fetchClusters(t *testing.T) {
 			args: args{
 				client: &mockECSClient{},
 			},
-			want: []*string{
-				GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1"),
-				GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:cluster/cluster-2"),
+			want: []string{
+				"arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1",
+				"arn:aws:ecs:us-east-1:123456789012:cluster/cluster-2",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := fetchClusters(tt.args.client)
+			got, err := fetchClusters(context.Background(), tt.args.client)
 			if (err != nil) != tt.wantErr {
 				assert.Error(t, err)
 			}
@@ -56,13 +54,13 @@ func Test_fetchClusters(t *testing.T) {
 
 func Test_fetchTasksFromCluster(t *testing.T) {
 	type args struct {
-		client  ecsiface.ECSAPI
+		client  ECSAPI
 		cluster string
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    []*string
+		want    []string
 		wantErr bool
 	}{
 		{
@@ -80,15 +78,15 @@ func Test_fetchTasksFromCluster(t *testing.T) {
 				client:  &mockECSClient{},
 				cluster: "cluster-1",
 			},
-			want: []*string{
-				GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000"),
-				GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111"),
+			want: []string{
+				"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000",
+				"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := fetchTasksFromCluster(tt.args.client, tt.args.cluster)
+			got, err := fetchTasksFromCluster(context.Background(), tt.args.client, tt.args.cluster)
 			if (err != nil) != tt.wantErr {
 				assert.Error(t, err)
 			}
@@ -99,9 +97,9 @@ func Test_fetchTasksFromCluster(t *testing.T) {
 
 func Test_fetchContainersFromTasks(t *testing.T) {
 	type args struct {
-		client  ecsiface.ECSAPI
+		client  ECSAPI
 		cluster string
-		tasks   []*string
+		tasks   []string
 	}
 	tests := []struct {
 		name    string
@@ -116,8 +114,8 @@ func Test_fetchContainersFromTasks(t *testing.T) {
 					ErrorOnDescribeTasks: true,
 				},
 				cluster: "cluster-1",
-				tasks: []*string{
-					GetPointerToValue("BAD-ARN"),
+				tasks: []string{
+					"BAD-ARN",
 				},
 			},
 			wantErr: true,
@@ -127,8 +125,8 @@ func Test_fetchContainersFromTasks(t *testing.T) {
 			args: args{
 				client:  &mockECSClient{},
 				cluster: "cluster-1",
-				tasks: []*string{
-					GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000"),
+				tasks: []string{
+					"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000",
 				},
 			},
 			want: []reporter.Container{
@@ -151,9 +149,9 @@ func Test_fetchContainersFromTasks(t *testing.T) {
 			args: args{
 				client:  &mockECSClient{},
 				cluster: "cluster-1",
-				tasks: []*string{
-					GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000"),
-					GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111"),
+				tasks: []string{
+					"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000",
+					"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111",
 				},
 			},
 			want: []reporter.Container{
@@ -186,7 +184,7 @@ func Test_fetchContainersFromTasks(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := fetchContainersFromTasks(tt.args.client, tt.args.cluster, tt.args.tasks)
+			got, err := fetchContainersFromTasks(context.Background(), tt.args.client, tt.args.cluster, tt.args.tasks)
 			if (err != nil) != tt.wantErr {
 				assert.Error(t, err)
 			}
@@ -197,9 +195,9 @@ func Test_fetchContainersFromTasks(t *testing.T) {
 
 func Test_fetchTasksMetadata(t *testing.T) {
 	type args struct {
-		client  ecsiface.ECSAPI
+		client  ECSAPI
 		cluster string
-		tasks   []*string
+		tasks   []string
 	}
 	tests := []struct {
 		name    string
@@ -214,8 +212,8 @@ func Test_fetchTasksMetadata(t *testing.T) {
 					ErrorOnDescribeTasks: true,
 				},
 				cluster: "cluster-1",
-				tasks: []*string{
-					GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000"),
+				tasks: []string{
+					"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000",
 				},
 			},
 			wantErr: true,
@@ -227,8 +225,8 @@ func Test_fetchTasksMetadata(t *testing.T) {
 					ErrorOnListTagsForResource: true,
 				},
 				cluster: "cluster-1",
-				tasks: []*string{
-					GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000"),
+				tasks: []string{
+					"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000",
 				},
 			},
 			wantErr: true,
@@ -238,9 +236,9 @@ func Test_fetchTasksMetadata(t *testing.T) {
 			args: args{
 				client:  &mockECSClient{},
 				cluster: "cluster-1",
-				tasks: []*string{
-					GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000"),
-					GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111"),
+				tasks: []string{
+					"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000",
+					"arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-111111111111",
 				},
 			},
 			want: []reporter.Task{
@@ -264,7 +262,7 @@ func Test_fetchTasksMetadata(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := fetchTasksMetadata(tt.args.client, tt.args.cluster, tt.args.tasks)
+			got, err := fetchTasksMetadata(context.Background(), tt.args.client, tt.args.cluster, tt.args.tasks)
 			if (err != nil) != tt.wantErr {
 				assert.Error(t, err)
 			}
@@ -275,7 +273,7 @@ func Test_fetchTasksMetadata(t *testing.T) {
 
 func Test_fetchTagsForResource(t *testing.T) {
 	type args struct {
-		client      ecsiface.ECSAPI
+		client      ECSAPI
 		resourceARN string
 	}
 	tests := []struct {
@@ -316,7 +314,7 @@ func Test_fetchTagsForResource(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := fetchTagsForResource(tt.args.client, tt.args.resourceARN)
+			got, err := fetchTagsForResource(context.Background(), tt.args.client, tt.args.resourceARN)
 			if (err != nil) != tt.wantErr {
 				assert.Error(t, err)
 			}
@@ -327,13 +325,13 @@ func Test_fetchTagsForResource(t *testing.T) {
 
 func Test_fetchServicesFromCluster(t *testing.T) {
 	type args struct {
-		client  ecsiface.ECSAPI
+		client  ECSAPI
 		cluster string
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    []*string
+		want    []string
 		wantErr bool
 	}{
 		{
@@ -352,15 +350,15 @@ func Test_fetchServicesFromCluster(t *testing.T) {
 				client:  &mockECSClient{},
 				cluster: "cluster-1",
 			},
-			want: []*string{
-				GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1"),
-				GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2"),
+			want: []string{
+				"arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1",
+				"arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := fetchServicesFromCluster(tt.args.client, tt.args.cluster)
+			got, err := fetchServicesFromCluster(context.Background(), tt.args.client, tt.args.cluster)
 			if (err != nil) != tt.wantErr {
 				assert.Error(t, err)
 			}
@@ -371,9 +369,9 @@ func Test_fetchServicesFromCluster(t *testing.T) {
 
 func Test_fetchServicesMetadata(t *testing.T) {
 	type args struct {
-		client   ecsiface.ECSAPI
+		client   ECSAPI
 		cluster  string
-		services []*string
+		services []string
 	}
 	tests := []struct {
 		name    string
@@ -388,8 +386,8 @@ func Test_fetchServicesMetadata(t *testing.T) {
 					ErrorOnDescribeServices: true,
 				},
 				cluster: "cluster-1",
-				services: []*string{
-					GetPointerToValue("arn"),
+				services: []string{
+					"arn",
 				},
 			},
 			wantErr: true,
@@ -401,8 +399,8 @@ func Test_fetchServicesMetadata(t *testing.T) {
 					ErrorOnListTagsForResource: true,
 				},
 				cluster: "cluster-1",
-				services: []*string{
-					GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1"),
+				services: []string{
+					"arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1",
 				},
 			},
 			wantErr: true,
@@ -412,9 +410,9 @@ func Test_fetchServicesMetadata(t *testing.T) {
 			args: args{
 				client:  &mockECSClient{},
 				cluster: "cluster-1",
-				services: []*string{
-					GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1"),
-					GetPointerToValue("arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2"),
+				services: []string{
+					"arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-1",
+					"arn:aws:ecs:us-east-1:123456789012:service/cluster-1/service-2",
 				},
 			},
 			want: []reporter.Service{
@@ -434,7 +432,7 @@ func Test_fetchServicesMetadata(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := fetchServicesMetadata(tt.args.client, tt.args.cluster, tt.args.services)
+			got, err := fetchServicesMetadata(context.Background(), tt.args.client, tt.args.cluster, tt.args.services)
 			if (err != nil) != tt.wantErr {
 				assert.Error(t, err)
 			}
@@ -501,7 +499,7 @@ func Test_constructServiceARN(t *testing.T) {
 func Test_getContainerImageTag(t *testing.T) {
 	type args struct {
 		containerTagMap map[string]string
-		container       *ecs.Container
+		container       ecstypes.Container
 	}
 	tests := []struct {
 		name string
@@ -515,9 +513,9 @@ func Test_getContainerImageTag(t *testing.T) {
 					"sha256:1234567890123456789012345678901234567890123456789012345678901111": "image-1:latest",
 					"sha256:1234567890123456789012345678901234567890123456789012345678902222": "image-2:latest",
 				},
-				container: &ecs.Container{
-					Image:       GetPointerToValue("image-1:latest"),
-					ImageDigest: GetPointerToValue("sha256:1234567890123456789012345678901234567890123456789012345678901111"),
+				container: ecstypes.Container{
+					Image:       aws.String("image-1:latest"),
+					ImageDigest: aws.String("sha256:1234567890123456789012345678901234567890123456789012345678901111"),
 				},
 			},
 			want: "image-1:latest",
@@ -529,9 +527,9 @@ func Test_getContainerImageTag(t *testing.T) {
 					"sha256:1234567890123456789012345678901234567890123456789012345678901111": "image-1:latest",
 					"sha256:1234567890123456789012345678901234567890123456789012345678902222": "image-2:latest",
 				},
-				container: &ecs.Container{
-					Image:       GetPointerToValue("image-1@sha256:1234567890123456789012345678901234567890123456789012345678901111"),
-					ImageDigest: GetPointerToValue("sha256:1234567890123456789012345678901234567890123456789012345678901111"),
+				container: ecstypes.Container{
+					Image:       aws.String("image-1@sha256:1234567890123456789012345678901234567890123456789012345678901111"),
+					ImageDigest: aws.String("sha256:1234567890123456789012345678901234567890123456789012345678901111"),
 				},
 			},
 			want: "image-1:latest",
@@ -543,9 +541,9 @@ func Test_getContainerImageTag(t *testing.T) {
 					"sha256:1234567890123456789012345678901234567890123456789012345678901111": "image-1:latest",
 					"sha256:1234567890123456789012345678901234567890123456789012345678902222": "image-2:latest",
 				},
-				container: &ecs.Container{
-					Image:       GetPointerToValue("image-1@sha256:0000"),
-					ImageDigest: GetPointerToValue("sha256:11"),
+				container: ecstypes.Container{
+					Image:       aws.String("image-1@sha256:0000"),
+					ImageDigest: aws.String("sha256:11"),
 				},
 			},
 			want: "image-1:UNKNOWN",
@@ -553,7 +551,7 @@ func Test_getContainerImageTag(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getContainerImageTag(tt.args.containerTagMap, tt.args.container)
+			got := getContainerImageTag(tt.args.containerTagMap, &tt.args.container)
 			assert.Equal(t, tt.want, got)
 		})
 	}
