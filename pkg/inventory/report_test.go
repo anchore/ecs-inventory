@@ -1,13 +1,24 @@
 package inventory
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"os"
 	"testing"
 
+	"github.com/h2non/gock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/anchore/ecs-inventory/internal/logger"
+	"github.com/anchore/ecs-inventory/pkg/connection"
 	"github.com/anchore/ecs-inventory/pkg/reporter"
 )
+
+func init() {
+	logger.Log = &logger.NoOpLogger{}
+}
 
 func TestGetInventoryReportForCluster(t *testing.T) {
 	mockSvc := &mockECSClient{}
@@ -16,6 +27,112 @@ func TestGetInventoryReportForCluster(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, 4, len(report.Containers))
+}
+
+func TestHandleReport(t *testing.T) {
+	testReport := reporter.Report{
+		Timestamp:  "2024-01-01T00:00:00Z",
+		ClusterARN: "arn:aws:ecs:us-east-1:123456789012:cluster/test",
+		Containers: []reporter.Container{
+			{
+				ARN:         "arn:aws:ecs:us-east-1:123456789012:container/abc",
+				ImageTag:    "nginx:latest",
+				ImageDigest: "sha256:abc123",
+				TaskARN:     "arn:aws:ecs:us-east-1:123456789012:task/test/task1",
+			},
+		},
+	}
+
+	validAnchore := connection.AnchoreInfo{
+		URL:      "https://ancho.re",
+		User:     "admin",
+		Password: "foobar",
+		Account:  "test",
+		HTTP: connection.HTTPConfig{
+			TimeoutSeconds: 10,
+			Insecure:       true,
+		},
+	}
+
+	invalidAnchore := connection.AnchoreInfo{}
+
+	t.Run("dry run does not post or print", func(t *testing.T) {
+		err := HandleReport(testReport, validAnchore, true, true)
+		assert.NoError(t, err)
+	})
+
+	t.Run("valid anchore quiet posts to anchore", func(t *testing.T) {
+		defer gock.Off()
+		gock.New("https://ancho.re").
+			Post("v2/ecs-inventory").
+			Reply(201).
+			JSON(map[string]interface{}{})
+
+		err := HandleReport(testReport, validAnchore, true, false)
+		assert.NoError(t, err)
+		assert.True(t, gock.IsDone())
+	})
+
+	t.Run("invalid anchore not quiet prints to stdout", func(t *testing.T) {
+		oldStdout := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+
+		err := HandleReport(testReport, invalidAnchore, false, false)
+
+		w.Close()
+		os.Stdout = oldStdout
+
+		var buf bytes.Buffer
+		buf.ReadFrom(r)
+		output := buf.String()
+
+		assert.NoError(t, err)
+		assert.Contains(t, output, testReport.ClusterARN)
+	})
+
+	t.Run("invalid anchore quiet does not print", func(t *testing.T) {
+		err := HandleReport(testReport, invalidAnchore, true, false)
+		assert.NoError(t, err)
+	})
+}
+
+func Test_reportToStdout(t *testing.T) {
+	testReport := reporter.Report{
+		Timestamp:  "2024-01-01T00:00:00Z",
+		ClusterARN: "arn:aws:ecs:us-east-1:123456789012:cluster/test",
+		Containers: []reporter.Container{
+			{
+				ARN:         "arn:aws:ecs:us-east-1:123456789012:container/abc",
+				ImageTag:    "nginx:latest",
+				ImageDigest: "sha256:abc123",
+				TaskARN:     "arn:aws:ecs:us-east-1:123456789012:task/test/task1",
+			},
+		},
+	}
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := reportToStdout(testReport)
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+	output := buf.String()
+
+	require.NoError(t, err)
+
+	var decoded reporter.Report
+	err = json.Unmarshal([]byte(output), &decoded)
+	require.NoError(t, err)
+	assert.Equal(t, testReport.ClusterARN, decoded.ClusterARN)
+	assert.Equal(t, testReport.Timestamp, decoded.Timestamp)
+	assert.Len(t, decoded.Containers, 1)
+	assert.Equal(t, "nginx:latest", decoded.Containers[0].ImageTag)
 }
 
 func Test_ensureReferencedObjectsExist(t *testing.T) {
