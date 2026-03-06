@@ -496,6 +496,95 @@ func Test_constructServiceARN(t *testing.T) {
 	}
 }
 
+func Test_buildContainerTagMap(t *testing.T) {
+	tests := []struct {
+		name  string
+		tasks []ecstypes.Task
+		want  map[string]string
+	}{
+		{
+			name:  "empty task list",
+			tasks: []ecstypes.Task{},
+			want:  map[string]string{},
+		},
+		{
+			name: "containers with @ in image are excluded",
+			tasks: []ecstypes.Task{
+				{
+					Containers: []ecstypes.Container{
+						{
+							Image:       aws.String("image-1@sha256:abc123"),
+							ImageDigest: aws.String("sha256:abc123"),
+						},
+					},
+				},
+			},
+			want: map[string]string{},
+		},
+		{
+			name: "containers with clean image tags are included",
+			tasks: []ecstypes.Task{
+				{
+					Containers: []ecstypes.Container{
+						{
+							Image:       aws.String("nginx:latest"),
+							ImageDigest: aws.String("sha256:abc123"),
+						},
+						{
+							Image:       aws.String("redis:7.0"),
+							ImageDigest: aws.String("sha256:def456"),
+						},
+					},
+				},
+			},
+			want: map[string]string{
+				"sha256:abc123": "nginx:latest",
+				"sha256:def456": "redis:7.0",
+			},
+		},
+		{
+			name: "mix of clean and @ images",
+			tasks: []ecstypes.Task{
+				{
+					Containers: []ecstypes.Container{
+						{
+							Image:       aws.String("nginx:latest"),
+							ImageDigest: aws.String("sha256:abc123"),
+						},
+						{
+							Image:       aws.String("redis@sha256:def456"),
+							ImageDigest: aws.String("sha256:def456"),
+						},
+					},
+				},
+			},
+			want: map[string]string{
+				"sha256:abc123": "nginx:latest",
+			},
+		},
+		{
+			name: "nil image digest is skipped",
+			tasks: []ecstypes.Task{
+				{
+					Containers: []ecstypes.Container{
+						{
+							Image:       aws.String("nginx:latest"),
+							ImageDigest: nil,
+						},
+					},
+				},
+			},
+			want: map[string]string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildContainerTagMap(tt.tasks)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func Test_getContainerImageTag(t *testing.T) {
 	type args struct {
 		containerTagMap map[string]string
