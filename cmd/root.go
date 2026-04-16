@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/anchore/ecs-inventory/internal/config"
 	"github.com/anchore/ecs-inventory/pkg"
-	"github.com/anchore/ecs-inventory/pkg/reporter"
+	"github.com/anchore/ecs-inventory/pkg/healthreporter"
+	"github.com/anchore/ecs-inventory/pkg/integration"
 )
 
 var ErrMissingDefaultConfigValue = fmt.Errorf("missing default config value")
@@ -42,30 +42,34 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Validate anchore connection & credentials, using a dummy report to post but this will be
-		// replaced in the future with a health check endpoint for the agents
-		if appConfig.AnchoreDetails.IsValid() {
-			dummyReport := reporter.Report{
-				ClusterARN: "validating-creds",
-				Timestamp:  time.Now().UTC().Format(time.RFC3339),
-			}
-			err := reporter.Post(dummyReport, appConfig.AnchoreDetails)
-			if err != nil {
-				log.Error("Failed to validate connection to Anchore", err)
-			} else {
-				log.Info("Successfully validated connection to Anchore")
-			}
-		} else {
+		if !appConfig.AnchoreDetails.IsValid() {
 			log.Warn("Anchore details not specified, will not report inventory")
+			pkg.PeriodicallyGetInventoryReportSimple(
+				appConfig.PollingIntervalSeconds,
+				appConfig.AnchoreDetails,
+				appConfig.Region,
+				appConfig.Quiet,
+				appConfig.DryRun,
+			)
+			return
 		}
 
-		pkg.PeriodicallyGetInventoryReport(
-			appConfig.PollingIntervalSeconds,
-			appConfig.AnchoreDetails,
-			appConfig.Region,
-			appConfig.Quiet,
-			appConfig.DryRun,
-		)
+		// Channel-coordinated startup with health reporting
+		neverDone := make(chan bool, 1)
+
+		ch := integration.GetChannels()
+		gatedReportInfo := healthreporter.GetGatedReportInfo()
+
+		go healthreporter.PeriodicallySendHealthReport(appConfig, ch, gatedReportInfo)
+		go pkg.PeriodicallyGetInventoryReport(appConfig, ch, gatedReportInfo)
+
+		_, err := integration.PerformRegistration(appConfig, ch)
+		if err != nil {
+			log.Error("Failed to perform registration with Anchore Enterprise", err)
+			os.Exit(1)
+		}
+
+		<-neverDone
 	},
 }
 

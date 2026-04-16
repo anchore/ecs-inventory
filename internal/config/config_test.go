@@ -37,9 +37,10 @@ func TestLoadConfigFromFileCliConfigPath(t *testing.T) {
 				TimeoutSeconds: 10,
 			},
 		},
-		Region:                 "us-east-1",
-		PollingIntervalSeconds: 60,
-		Quiet:                  true,
+		Region:                      "us-east-1",
+		PollingIntervalSeconds:      60,
+		HealthReportIntervalSeconds: 60,
+		Quiet:                       true,
 	}
 
 	assert.EqualValues(t, expectedCfg, appCfg)
@@ -89,6 +90,7 @@ clioptions:
   configpath: testdata/config.yaml
   verbosity: 0
 pollingintervalseconds: 300
+healthreportintervalseconds: 0
 anchoredetails:
   url: http://localhost:8228/v1
   user: admin
@@ -97,6 +99,10 @@ anchoredetails:
   http:
     insecure: false
     timeoutseconds: 0
+registration:
+  registrationid: ""
+  integrationname: ""
+  integrationdescription: ""
 region: ""
 quiet: false
 dryrun: false
@@ -124,6 +130,8 @@ func TestDefaultValuesSuppliedForEmptyConfig(t *testing.T) {
 		Log: Logging{
 			Level: "info",
 		},
+		PollingIntervalSeconds:      300,
+		HealthReportIntervalSeconds: 60,
 		AnchoreDetails: connection.AnchoreInfo{
 			Account:  "admin",
 			Password: "",

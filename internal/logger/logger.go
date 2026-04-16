@@ -17,11 +17,15 @@ func (log NoOpLogger) Debugf(string, ...interface{}) {}
 
 func (log NoOpLogger) Info(string, ...interface{}) {}
 
+func (log NoOpLogger) Infof(string, ...interface{}) {}
+
 func (log NoOpLogger) Warn(string, ...interface{}) {}
 
 func (log NoOpLogger) Warnf(string, ...interface{}) {}
 
 func (log NoOpLogger) Error(string, error, ...interface{}) {}
+
+func (log NoOpLogger) Errorf(string, ...interface{}) {}
 
 type ZapLogger struct {
 	zap *zap.SugaredLogger
@@ -47,10 +51,18 @@ func (log ZapLogger) Warnf(msg string, args ...interface{}) {
 	log.zap.Warnf(msg, args...)
 }
 
+func (log ZapLogger) Infof(msg string, args ...interface{}) {
+	log.zap.Infof(msg, args...)
+}
+
 func (log ZapLogger) Error(msg string, err error, args ...interface{}) {
 	args = append(args, "err", err)
 
 	log.zap.Errorw(msg, args...)
+}
+
+func (log ZapLogger) Errorf(msg string, args ...interface{}) {
+	log.zap.Errorf(msg, args...)
 }
 
 type LogConfig struct {

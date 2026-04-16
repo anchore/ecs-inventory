@@ -33,13 +33,21 @@ type CliOnlyOptions struct {
 }
 
 type AppConfig struct {
-	Log                    Logging `mapstructure:"log"`
-	CliOptions             CliOnlyOptions
-	PollingIntervalSeconds int                    `mapstructure:"polling-interval-seconds"`
-	AnchoreDetails         connection.AnchoreInfo `mapstructure:"anchore"`
-	Region                 string                 `mapstructure:"region"`
-	Quiet                  bool                   `mapstructure:"quiet"`   // if true do not log the inventory report to stdout
-	DryRun                 bool                   `mapstructure:"dry-run"` // if true do not report inventory to Anchore
+	Log                         Logging             `mapstructure:"log"`
+	CliOptions                  CliOnlyOptions
+	PollingIntervalSeconds      int                    `mapstructure:"polling-interval-seconds"`
+	HealthReportIntervalSeconds int                    `mapstructure:"health-report-interval-seconds"`
+	AnchoreDetails              connection.AnchoreInfo `mapstructure:"anchore"`
+	Registration                RegistrationOptions    `mapstructure:"anchore-registration"`
+	Region                      string                 `mapstructure:"region"`
+	Quiet                       bool                   `mapstructure:"quiet"`   // if true do not log the inventory report to stdout
+	DryRun                      bool                   `mapstructure:"dry-run"` // if true do not report inventory to Anchore
+}
+
+type RegistrationOptions struct {
+	RegistrationID         string `mapstructure:"registration-id"`
+	IntegrationName        string `mapstructure:"integration-name"`
+	IntegrationDescription string `mapstructure:"integration-description"`
 }
 
 // Logging Configuration
@@ -60,10 +68,11 @@ var DefaultConfigValues = AppConfig{
 			TimeoutSeconds: 60,
 		},
 	},
-	Region:                 "",
-	PollingIntervalSeconds: 300,
-	Quiet:                  false,
-	DryRun:                 false,
+	Region:                      "",
+	PollingIntervalSeconds:      300,
+	HealthReportIntervalSeconds: 60,
+	Quiet:                       false,
+	DryRun:                      false,
 }
 
 var ErrConfigFileNotFound = fmt.Errorf("application config file not found")
@@ -71,9 +80,20 @@ var ErrConfigFileNotFound = fmt.Errorf("application config file not found")
 func setDefaultValues(v *viper.Viper) {
 	v.SetDefault("log.level", DefaultConfigValues.Log.Level)
 	v.SetDefault("log.file", DefaultConfigValues.Log.FileLocation)
+	v.SetDefault("anchore.url", DefaultConfigValues.AnchoreDetails.URL)
+	v.SetDefault("anchore.user", DefaultConfigValues.AnchoreDetails.User)
+	v.SetDefault("anchore.password", DefaultConfigValues.AnchoreDetails.Password)
 	v.SetDefault("anchore.account", DefaultConfigValues.AnchoreDetails.Account)
 	v.SetDefault("anchore.http.insecure", DefaultConfigValues.AnchoreDetails.HTTP.Insecure)
 	v.SetDefault("anchore.http.timeout-seconds", DefaultConfigValues.AnchoreDetails.HTTP.TimeoutSeconds)
+	v.SetDefault("region", DefaultConfigValues.Region)
+	v.SetDefault("polling-interval-seconds", DefaultConfigValues.PollingIntervalSeconds)
+	v.SetDefault("health-report-interval-seconds", DefaultConfigValues.HealthReportIntervalSeconds)
+	v.SetDefault("quiet", DefaultConfigValues.Quiet)
+	v.SetDefault("dry-run", DefaultConfigValues.DryRun)
+	v.SetDefault("anchore-registration.registration-id", DefaultConfigValues.Registration.RegistrationID)
+	v.SetDefault("anchore-registration.integration-name", DefaultConfigValues.Registration.IntegrationName)
+	v.SetDefault("anchore-registration.integration-description", DefaultConfigValues.Registration.IntegrationDescription)
 }
 
 // Load the Application Configuration from the Viper specifications
@@ -131,6 +151,10 @@ func (cfg *AppConfig) Build() error {
 		default:
 			cfg.Log.Level = "info"
 		}
+	}
+
+	if cfg.HealthReportIntervalSeconds < 30 || cfg.HealthReportIntervalSeconds > 600 {
+		return fmt.Errorf("health-report-interval-seconds must be between 30 and 600")
 	}
 
 	return nil

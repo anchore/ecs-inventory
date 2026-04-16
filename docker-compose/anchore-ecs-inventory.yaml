@@ -22,10 +22,22 @@ anchore:
     insecure: true
     timeout-seconds: 10
 
+anchore-registration:
+  # The id to register the agent as with Enterprise, so Enterprise can map the agent to its integration uuid.
+  # If left unspecified, the agent will generate a UUID to use as registration-id.
+  registration-id:
+  # The name that the agent should have. If left unspecified it will be empty.
+  integration-name:
+  # A short description for the agent
+  integration-description:
+
 # the aws region
 region: $ANCHORE_ECS_INVENTORY_REGION
 
 # frequency of which to poll the region
 polling-interval-seconds: 300
+
+# frequency of which to send health reports to Anchore Enterprise (seconds, range: 30-600)
+health-report-interval-seconds: 60
 
 quiet: false
