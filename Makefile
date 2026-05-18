@@ -19,7 +19,7 @@ TITLE := $(BOLD)$(PURPLE)
 SUCCESS := $(BOLD)$(GREEN)
 
 # ci dependency versions
-GOLANG_CI_VERSION = v1.64.2
+GOLANG_CI_VERSION = v2.12.2
 GOSIMPORTS_VERSION = v0.3.8
 GORELEASER_VERSION = v1.16.0
 
@@ -56,7 +56,7 @@ bootstrap-go:
 .PHONY: bootstrap-tools
 bootstrap-tools: $(TEMPDIR)
 	$(call title,Boostrapping tools)
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TEMPDIR)/ $(GOLANG_CI_VERSION)
+	GOBIN="$(abspath $(TEMPDIR))" go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANG_CI_VERSION)
 	GOBIN="$(realpath $(TEMPDIR))" go install github.com/rinchsan/gosimports/cmd/gosimports@$(GOSIMPORTS_VERSION)
 	GOBIN="$(abspath $(TEMPDIR))" go install github.com/goreleaser/goreleaser@$(GORELEASER_VERSION)
 

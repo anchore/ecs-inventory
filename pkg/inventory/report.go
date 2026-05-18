@@ -146,7 +146,7 @@ func ensureReferencedObjectsExist(report reporter.Report) reporter.Report {
 			// Task not present in report, create it
 			updatedReport.Tasks = append(updatedReport.Tasks, reporter.Task{
 				ARN:        container.TaskARN,
-				TaskDefARN: "UNKNOWN", // NOTE TaskDefARN is not a nullable field in the db, so we need to provide a value
+				TaskDefARN: unknown, // NOTE TaskDefARN is not a nullable field in the db, so we need to provide a value
 				ServiceARN: "",
 			})
 			logger.Log.Warn(
@@ -163,10 +163,10 @@ func ensureReferencedObjectsExist(report reporter.Report) reporter.Report {
 	if len(report.Services) > 0 {
 		for i, task := range updatedReport.Tasks {
 			if task.ServiceARN == "" {
-				updatedReport.Tasks[i].ServiceARN = "UNKNOWN"
+				updatedReport.Tasks[i].ServiceARN = unknown
 				if !addUnknownService {
 					updatedReport.Services = append(updatedReport.Services, reporter.Service{
-						ARN: "UNKNOWN",
+						ARN: unknown,
 					})
 					addUnknownService = true
 				}
