@@ -98,6 +98,8 @@ anchoredetails:
     insecure: false
     timeoutseconds: 0
 region: ""
+assumerolearn: ""
+externalid: ""
 quiet: false
 dryrun: false
 `
