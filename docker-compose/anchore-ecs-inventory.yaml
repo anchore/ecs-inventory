@@ -25,6 +25,17 @@ anchore:
 # the aws region
 region: $ANCHORE_ECS_INVENTORY_REGION
 
+# optional - the ARN of an IAM role to assume (via STS) before querying ECS.
+# May be in the same or a different AWS account. Leave empty to use the
+# ambient credentials directly. Override via the ANCHORE_ECS_INVENTORY_ASSUME_ROLE_ARN
+# environment variable or the --assume-role-arn flag.
+assume-role-arn: ""
+
+# optional - external ID to use when assuming assume-role-arn (only needed if
+# the target role's trust policy requires it). Override via the
+# ANCHORE_ECS_INVENTORY_EXTERNAL_ID environment variable or the --external-id flag.
+external-id: ""
+
 # frequency of which to poll the region
 polling-interval-seconds: 300
 
