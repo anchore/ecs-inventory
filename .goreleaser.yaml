@@ -1,3 +1,5 @@
+version: 2
+
 release:
   prerelease: auto
 
@@ -44,13 +46,15 @@ builds:
 
 archives:
   - id: archive-generic
-    format: tar.gz
-    builds:
+    formats:
+      - tar.gz
+    ids:
       - generic
     name_template: 'anchore-ecs-inventory_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}{{ with .Mips }}_{{ . }}{{ end }}{{ if not (eq .Amd64 "v1") }}{{ .Amd64 }}{{ end }}'
   - id: archive-fips
-    format: tar.gz
-    builds:
+    formats:
+      - tar.gz
+    ids:
       - fips
     name_template: 'anchore-ecs-inventory-fips_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}{{ with .Mips }}_{{ . }}{{ end }}{{ if not (eq .Amd64 "v1") }}{{ .Amd64 }}{{ end }}'
 
@@ -146,4 +150,3 @@ docker_manifests:
       - anchore/ecs-inventory:{{ .Tag }}-amd64
       - anchore/ecs-inventory:{{ .Tag }}-arm64v8
     skip_push: auto
-      
