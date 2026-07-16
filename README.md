@@ -44,19 +44,41 @@ ECS Inventory configuration.
 
 ### AWS Credentials
 
-Anchore ECS Inventory uses the AWS SDK for Go. The SDK will look for credentials
-in the following order:
+Anchore ECS Inventory always scans a single AWS account and region — the
+**target**. There are two ways to point it at that target:
 
-1. Environment variables
-2. Shared credentials file (~/.aws/credentials)
+- **Scan the account/region the agent runs in.** Deploy `anchore-ecs-inventory`
+  into the AWS account and region you want to inventory and let it use the
+  ambient credentials (see below). Set `region` to the region you want scanned,
+  or leave it empty to scan the region the agent is running in (the SDK resolves
+  it from `AWS_REGION`/`AWS_DEFAULT_REGION` or the EC2/ECS instance metadata). No
+  role assumption is required.
+- **Scan an external account/region.** Set `region` to the target region and
+  set `assume-role-arn` (plus `external-id` if the target role's trust policy
+  requires it) so the agent assumes a role in the account you want to inventory.
+  See [Assuming a role](#assuming-a-role-including-cross-account).
+
+In both cases `region` is the **target** region — the region that gets
+scanned — regardless of whether a role is being assumed.
+
+#### Credential sources
+
+Anchore ECS Inventory uses the AWS SDK for Go. The SDK looks for the base
+credentials (the ones the agent starts with, before any role assumption) in the
+following order:
+
+1. **Environment variables** (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`).
+2. **Shared credentials file** (`~/.aws/credentials`):
    ```
    [default]
    aws_access_key_id = <YOUR_ACCESS_KEY_ID>
    aws_secret_access_key = <YOUR_SECRET_ACCESS_KEY>
    ```
 
-When running as a daemon in ECS, the recommended approach is to attach an IAM
-task role to the task definition rather than supplying static credentials.
+3. **Instance profile / IAM role** — an ECS task role attached to the task
+   definition, or an EC2 instance profile when running on EC2. This is the
+   recommended approach when running as a daemon in AWS, since it avoids
+   supplying static credentials.
 
 #### Required IAM permissions
 
@@ -161,53 +183,76 @@ location the configuration file is looked for is
 `~/.anchore-ecs-inventory.yaml`. The configuration file can be overridden with
 the `-c` flag.
 
+Every setting below can also be supplied via an environment variable. The env
+var name is the config key prefixed with `ANCHORE_ECS_INVENTORY_`, uppercased,
+with `.` and `-` replaced by `_` (e.g. `anchore.http.timeout-seconds` becomes
+`ANCHORE_ECS_INVENTORY_ANCHORE_HTTP_TIMEOUT_SECONDS`). Each setting's env var is
+noted inline below; a handful also have CLI flags.
+
 ```yaml
 log:
-  # level of logging that anchore-ecs-inventory will do  { 'error' | 'info' | 'debug }
+  # level of logging that anchore-ecs-inventory will do  { 'error' | 'info' | 'debug' }
+  # env var: ANCHORE_ECS_INVENTORY_LOG_LEVEL
   level: "info"
 
   # location to write the log file (default is not to have a log file)
+  # env var: ANCHORE_ECS_INVENTORY_LOG_FILE
   file: "./anchore-ecs-inventory.log"
 
 anchore:
   # anchore enterprise api url  (e.g. http://localhost:8228)
+  # env var: ANCHORE_ECS_INVENTORY_ANCHORE_URL
   url: $ANCHORE_ECS_INVENTORY_ANCHORE_URL
 
   # anchore enterprise username
+  # env var: ANCHORE_ECS_INVENTORY_ANCHORE_USER
   user: $ANCHORE_ECS_INVENTORY_ANCHORE_USER
 
   # anchore enterprise password
-  password: ANCHORE_ECS_INVENTORY_ANCHORE_PASSWORD
+  # env var: ANCHORE_ECS_INVENTORY_ANCHORE_PASSWORD
+  password: $ANCHORE_ECS_INVENTORY_ANCHORE_PASSWORD
 
   # anchore enterprise account that the inventory will be sent
+  # env var: ANCHORE_ECS_INVENTORY_ANCHORE_ACCOUNT
   account: $ANCHORE_ECS_INVENTORY_ANCHORE_ACCOUNT
 
   http:
+    # allow insecure (e.g. self-signed) TLS connections to the anchore api
+    # env var: ANCHORE_ECS_INVENTORY_ANCHORE_HTTP_INSECURE
     insecure: true
+
+    # timeout in seconds for requests to the anchore api
+    # env var: ANCHORE_ECS_INVENTORY_ANCHORE_HTTP_TIMEOUT_SECONDS
     timeout-seconds: 10
 
-# the aws region
+# the aws region to scan. This is always the target region - the region that
+# gets inventoried - whether or not a role is assumed. Leave empty to fall back
+# to the SDK's default region resolution (the AWS_REGION / AWS_DEFAULT_REGION
+# environment variables, or the EC2/ECS instance metadata) - when running in
+# AWS that means scanning the region the agent is running in.
+# env var: ANCHORE_ECS_INVENTORY_REGION (flag: -r, --region)
 region: $ANCHORE_ECS_INVENTORY_REGION
 
 # optional - the ARN of an IAM role to assume (via STS) before querying ECS.
 # May be in the same or a different AWS account. Leave empty to use the
-# ambient credentials directly.
+# ambient credentials directly. When set, the target account is the one that
+# owns this role; region (above) still selects the region to scan.
+# env var: ANCHORE_ECS_INVENTORY_ASSUME_ROLE_ARN (flag: -a, --assume-role-arn)
 assume-role-arn: ""
 
 # optional - external ID to use when assuming assume-role-arn (only needed if
 # the target role's trust policy requires it)
+# env var: ANCHORE_ECS_INVENTORY_EXTERNAL_ID (flag: -e, --external-id)
 external-id: ""
 
 # frequency of which to poll the region
+# env var: ANCHORE_ECS_INVENTORY_POLLING_INTERVAL_SECONDS (flag: -p, --polling-interval-seconds)
 polling-interval-seconds: 300
 
+# if true, do not log the inventory report to stdout
+# env var: ANCHORE_ECS_INVENTORY_QUIET (flag: -q, --quiet)
 quiet: false
 ```
-
-You can also override any configuration value with environment variables. They
-must be prefixed with `ANCHORE_ECS_INVENTORY_` and be in all caps. For example,
-`ANCHORE_ECS_INVENTORY_LOG_LEVEL=error` would override the `log.level`
-configuration
 
 ## Releasing
 
