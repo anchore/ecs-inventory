@@ -1,31 +1,58 @@
 log:
-  # level of logging that anchore-ecs-inventory will do  { 'error' | 'info' | 'debug }
+  # level of logging that anchore-ecs-inventory will do  { 'error' | 'info' | 'debug' }
+  # env var: ANCHORE_ECS_INVENTORY_LOG_LEVEL
   level: "info"
 
   # location to write the log file (default is not to have a log file)
+  # env var: ANCHORE_ECS_INVENTORY_LOG_FILE
   file: ""
 
 anchore:
   # anchore enterprise api url  (e.g. http://localhost:8228)
+  # env var: ANCHORE_ECS_INVENTORY_ANCHORE_URL
   url: $ANCHORE_ECS_INVENTORY_ANCHORE_URL
 
   # anchore enterprise username
+  # env var: ANCHORE_ECS_INVENTORY_ANCHORE_USER
   user: $ANCHORE_ECS_INVENTORY_ANCHORE_USER
 
   # anchore enterprise password
-  password: ANCHORE_ECS_INVENTORY_ANCHORE_PASSWORD
+  # env var: ANCHORE_ECS_INVENTORY_ANCHORE_PASSWORD
+  password: $ANCHORE_ECS_INVENTORY_ANCHORE_PASSWORD
 
   # anchore enterprise account that the inventory will be sent
+  # env var: ANCHORE_ECS_INVENTORY_ANCHORE_ACCOUNT
   account: $ANCHORE_ECS_INVENTORY_ANCHORE_ACCOUNT
 
   http:
+    # allow insecure (e.g. self-signed) TLS connections to the anchore api
+    # env var: ANCHORE_ECS_INVENTORY_ANCHORE_HTTP_INSECURE
     insecure: true
+
+    # timeout in seconds for requests to the anchore api
+    # env var: ANCHORE_ECS_INVENTORY_ANCHORE_HTTP_TIMEOUT_SECONDS
     timeout-seconds: 10
 
-# the aws region
+# the aws region to scan. This is always the target region - the region that
+# gets inventoried - whether or not a role is assumed.
+# env var: ANCHORE_ECS_INVENTORY_REGION (flag: -r, --region)
 region: $ANCHORE_ECS_INVENTORY_REGION
 
+# optional - the ARN of an IAM role to assume (via STS) before querying ECS.
+# May be in the same or a different AWS account. Leave empty to use the
+# ambient credentials directly.
+# env var: ANCHORE_ECS_INVENTORY_ASSUME_ROLE_ARN (flag: -a, --assume-role-arn)
+assume-role-arn: ""
+
+# optional - external ID to use when assuming assume-role-arn (only needed if
+# the target role's trust policy requires it).
+# env var: ANCHORE_ECS_INVENTORY_EXTERNAL_ID (flag: -e, --external-id)
+external-id: ""
+
 # frequency of which to poll the region
+# env var: ANCHORE_ECS_INVENTORY_POLLING_INTERVAL_SECONDS (flag: -p, --polling-interval-seconds)
 polling-interval-seconds: 300
 
+# if true, do not log the inventory report to stdout
+# env var: ANCHORE_ECS_INVENTORY_QUIET (flag: -q, --quiet)
 quiet: false

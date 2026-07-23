@@ -6,7 +6,9 @@ require (
 	github.com/adrg/xdg v0.5.3
 	github.com/aws/aws-sdk-go-v2 v1.42.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.30
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.29
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.88.1
+	github.com/aws/aws-sdk-go-v2/service/sts v1.44.1
 	github.com/h2non/gock v1.2.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/spf13/cobra v1.10.2
@@ -17,7 +19,6 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2/credentials v1.19.29 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.30 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.30 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.30 // indirect
@@ -27,7 +28,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/signin v1.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.32.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.37.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.44.1 // indirect
 	github.com/aws/smithy-go v1.27.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect

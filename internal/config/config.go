@@ -38,8 +38,15 @@ type AppConfig struct {
 	PollingIntervalSeconds int                    `mapstructure:"polling-interval-seconds"`
 	AnchoreDetails         connection.AnchoreInfo `mapstructure:"anchore"`
 	Region                 string                 `mapstructure:"region"`
-	Quiet                  bool                   `mapstructure:"quiet"`   // if true do not log the inventory report to stdout
-	DryRun                 bool                   `mapstructure:"dry-run"` // if true do not report inventory to Anchore
+	// AssumeRoleARN, if set, is the ARN of an IAM role that anchore-ecs-inventory will assume (via STS)
+	// before querying ECS. The role may live in the same AWS account or a different one, provided the
+	// role's trust policy permits the base credentials to assume it.
+	AssumeRoleARN string `mapstructure:"assume-role-arn"`
+	// ExternalID, if set, is passed when assuming AssumeRoleARN. Some roles (commonly cross-account,
+	// third-party roles) require an external ID in their trust policy. Ignored when AssumeRoleARN is empty.
+	ExternalID string `mapstructure:"external-id"`
+	Quiet      bool   `mapstructure:"quiet"`   // if true do not log the inventory report to stdout
+	DryRun     bool   `mapstructure:"dry-run"` // if true do not report inventory to Anchore
 }
 
 // Logging Configuration
@@ -61,6 +68,8 @@ var DefaultConfigValues = AppConfig{
 		},
 	},
 	Region:                 "",
+	AssumeRoleARN:          "",
+	ExternalID:             "",
 	PollingIntervalSeconds: 300,
 	Quiet:                  false,
 	DryRun:                 false,

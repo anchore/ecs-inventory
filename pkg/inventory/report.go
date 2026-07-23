@@ -8,9 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 
+	"github.com/anchore/ecs-inventory/internal"
 	"github.com/anchore/ecs-inventory/internal/logger"
 	"github.com/anchore/ecs-inventory/internal/tracker"
 	"github.com/anchore/ecs-inventory/pkg/connection"
@@ -47,7 +51,7 @@ func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo,
 }
 
 // GetInventoryReportsForRegion collects inventory reports for a specified region.
-func GetInventoryReportsForRegion(region string, anchoreDetails connection.AnchoreInfo, quiet, dryRun bool) error {
+func GetInventoryReportsForRegion(region, assumeRoleARN, externalID string, anchoreDetails connection.AnchoreInfo, quiet, dryRun bool) error {
 	ctx := context.Background()
 	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Getting Inventory Reports for region: %s", region))
 	logger.Log.Info("Getting Inventory Reports for region", "region", region)
@@ -61,6 +65,22 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 	if err != nil {
 		logger.Log.Error("Failed to load AWS config", err)
 		return fmt.Errorf("failed to load aws config: %w", err)
+	}
+
+	// If an assume-role ARN is configured, swap the config's credentials for STS assume-role
+	// credentials. The credentials cache resolves them lazily and refreshes them automatically
+	// as they expire, which suits the long-running daemon. The role may live in the same or a
+	// different AWS account.
+	if assumeRoleARN != "" {
+		logger.Log.Info("Assuming IAM role for ECS inventory", "roleArn", assumeRoleARN)
+		stsClient := sts.NewFromConfig(cfg)
+		provider := stscreds.NewAssumeRoleProvider(stsClient, assumeRoleARN, func(o *stscreds.AssumeRoleOptions) {
+			o.RoleSessionName = internal.ApplicationName
+			if externalID != "" {
+				o.ExternalID = aws.String(externalID)
+			}
+		})
+		cfg.Credentials = aws.NewCredentialsCache(provider)
 	}
 
 	err = checkAWSCredentials(ctx, cfg)
