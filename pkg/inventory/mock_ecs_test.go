@@ -3,6 +3,9 @@ package inventory
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ecs "github.com/aws/aws-sdk-go-v2/service/ecs"
@@ -16,11 +19,42 @@ type mockECSClient struct {
 	ErrorOnDescribeTasks       bool
 	ErrorOnListTagsForResource bool
 	ErrorOnDescribeServices    bool
+
+	// Multi-page responses for the List* calls. When a field is nil the call returns its
+	// fixed single-page response instead, so tests that predate pagination are unaffected.
+	ClusterPages [][]string
+	TaskPages    [][]string
+	ServicePages [][]string
+
+	// The ID lists each Describe* call was made with, in order, so tests can check batching.
+	DescribeTasksBatches    [][]string
+	DescribeServicesBatches [][]string
 }
 
-func (m *mockECSClient) ListClusters(ctx context.Context, _ *ecs.ListClustersInput, _ ...func(*ecs.Options)) (*ecs.ListClustersOutput, error) {
+// pageOf returns the page the token points at, plus the token for the page after it. Tokens
+// are just the next page's index.
+func pageOf(pages [][]string, token *string) ([]string, *string) {
+	idx := 0
+	if token != nil {
+		idx, _ = strconv.Atoi(*token)
+	}
+	if idx >= len(pages) {
+		return nil, nil
+	}
+	var next *string
+	if idx+1 < len(pages) {
+		next = aws.String(strconv.Itoa(idx + 1))
+	}
+	return pages[idx], next
+}
+
+func (m *mockECSClient) ListClusters(ctx context.Context, input *ecs.ListClustersInput, _ ...func(*ecs.Options)) (*ecs.ListClustersOutput, error) {
 	if m.ErrorOnListCluster {
 		return nil, errors.New("list cluster error")
+	}
+	if m.ClusterPages != nil {
+		arns, next := pageOf(m.ClusterPages, input.NextToken)
+		return &ecs.ListClustersOutput{ClusterArns: arns, NextToken: next}, nil
 	}
 	return &ecs.ListClustersOutput{
 		ClusterArns: []string{
@@ -30,9 +64,13 @@ func (m *mockECSClient) ListClusters(ctx context.Context, _ *ecs.ListClustersInp
 	}, nil
 }
 
-func (m *mockECSClient) ListTasks(ctx context.Context, _ *ecs.ListTasksInput, _ ...func(*ecs.Options)) (*ecs.ListTasksOutput, error) {
+func (m *mockECSClient) ListTasks(ctx context.Context, input *ecs.ListTasksInput, _ ...func(*ecs.Options)) (*ecs.ListTasksOutput, error) {
 	if m.ErrorOnListTasks {
 		return nil, errors.New("list tasks error")
+	}
+	if m.TaskPages != nil {
+		arns, next := pageOf(m.TaskPages, input.NextToken)
+		return &ecs.ListTasksOutput{TaskArns: arns, NextToken: next}, nil
 	}
 	return &ecs.ListTasksOutput{
 		TaskArns: []string{
@@ -42,9 +80,13 @@ func (m *mockECSClient) ListTasks(ctx context.Context, _ *ecs.ListTasksInput, _ 
 	}, nil
 }
 
-func (m *mockECSClient) ListServices(ctx context.Context, _ *ecs.ListServicesInput, _ ...func(*ecs.Options)) (*ecs.ListServicesOutput, error) {
+func (m *mockECSClient) ListServices(ctx context.Context, input *ecs.ListServicesInput, _ ...func(*ecs.Options)) (*ecs.ListServicesOutput, error) {
 	if m.ErrorOnListServices {
 		return nil, errors.New("list services error")
+	}
+	if m.ServicePages != nil {
+		arns, next := pageOf(m.ServicePages, input.NextToken)
+		return &ecs.ListServicesOutput{ServiceArns: arns, NextToken: next}, nil
 	}
 	return &ecs.ListServicesOutput{
 		ServiceArns: []string{
@@ -54,12 +96,55 @@ func (m *mockECSClient) ListServices(ctx context.Context, _ *ecs.ListServicesInp
 	}, nil
 }
 
+const (
+	syntheticTaskPrefix = "synthetic-task-"
+	syntheticDigest     = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+)
+
+// syntheticTaskARNs builds a task list long enough to span more than one DescribeTasks batch.
+func syntheticTaskARNs(n int) []string {
+	arns := make([]string, n)
+	for i := range arns {
+		arns[i] = fmt.Sprintf("%s%d", syntheticTaskPrefix, i)
+	}
+	return arns
+}
+
+// Every synthetic task shares one image digest, but only the first carries the readable tag.
+// The rest can only be resolved from a tag map built across all of the batches at once.
+func syntheticTask(arn string) ecstypes.Task {
+	image := "app@" + syntheticDigest
+	if arn == syntheticTaskPrefix+"0" {
+		image = "app:v1"
+	}
+	return ecstypes.Task{
+		TaskArn:    aws.String(arn),
+		ClusterArn: aws.String("arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1"),
+		TaskDefinitionArn: aws.String(
+			"arn:aws:ecs:us-east-1:123456789012:task-definition/task-definition-1:1",
+		),
+		Containers: []ecstypes.Container{
+			{
+				ContainerArn: aws.String("container-" + arn),
+				Name:         aws.String("container-" + arn),
+				Image:        aws.String(image),
+				ImageDigest:  aws.String(syntheticDigest),
+			},
+		},
+	}
+}
+
 func (m *mockECSClient) DescribeTasks(ctx context.Context, input *ecs.DescribeTasksInput, _ ...func(*ecs.Options)) (*ecs.DescribeTasksOutput, error) {
 	if m.ErrorOnDescribeTasks {
 		return nil, errors.New("describe tasks error")
 	}
+	m.DescribeTasksBatches = append(m.DescribeTasksBatches, input.Tasks)
 	tasks := []ecstypes.Task{}
 	for _, t := range input.Tasks {
+		if strings.HasPrefix(t, syntheticTaskPrefix) {
+			tasks = append(tasks, syntheticTask(t))
+			continue
+		}
 		switch t {
 		case "arn:aws:ecs:us-east-1:123456789012:task/cluster-1/12345678-1234-1234-1234-000000000000":
 			tasks = append(tasks, ecstypes.Task{
@@ -165,6 +250,7 @@ func (m *mockECSClient) DescribeServices(ctx context.Context, input *ecs.Describ
 	if m.ErrorOnDescribeServices {
 		return nil, errors.New("describe services error")
 	}
+	m.DescribeServicesBatches = append(m.DescribeServicesBatches, input.Services)
 
 	services := []ecstypes.Service{}
 	for _, s := range input.Services {

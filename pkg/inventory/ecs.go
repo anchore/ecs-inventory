@@ -3,6 +3,7 @@ package inventory
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -16,6 +17,16 @@ import (
 )
 
 const unknown = "UNKNOWN"
+
+// Hard AWS limits on how many IDs a single Describe* call accepts.
+const (
+	describeTasksBatchSize    = 100
+	describeServicesBatchSize = 10
+)
+
+// ListServices returns only 10 results per page by default; the other List* calls already
+// default to 100. 100 is the maximum for all of them.
+const listPageSize = 100
 
 // Check if AWS credentials are present in the loaded config
 func checkAWSCredentials(ctx context.Context, cfg aws.Config) error {
@@ -31,58 +42,91 @@ func checkAWSCredentials(ctx context.Context, cfg aws.Config) error {
 
 func fetchClusters(ctx context.Context, client ECSAPI) ([]string, error) {
 	defer tracker.TrackFunctionTime(time.Now(), "Fetching list of clusters")
-	input := &ecs.ListClustersInput{}
 
-	result, err := client.ListClusters(ctx, input)
-	if err != nil {
-		return nil, err
+	var clusterArns []string
+	paginator := ecs.NewListClustersPaginator(client, &ecs.ListClustersInput{})
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		clusterArns = append(clusterArns, page.ClusterArns...)
 	}
 
-	return result.ClusterArns, nil
+	return clusterArns, nil
 }
 
 func fetchTasksFromCluster(ctx context.Context, client ECSAPI, cluster string) ([]string, error) {
 	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Fetching tasks from cluster: %s", cluster))
-	input := &ecs.ListTasksInput{
+
+	var taskArns []string
+	paginator := ecs.NewListTasksPaginator(client, &ecs.ListTasksInput{
 		Cluster: aws.String(cluster),
+	})
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		taskArns = append(taskArns, page.TaskArns...)
 	}
 
-	result, err := client.ListTasks(ctx, input)
-	if err != nil {
-		return nil, err
-	}
-
-	return result.TaskArns, nil
+	return taskArns, nil
 }
 
 func fetchServicesFromCluster(ctx context.Context, client ECSAPI, cluster string) ([]string, error) {
 	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Fetching services from cluster: %s", cluster))
-	input := &ecs.ListServicesInput{
+
+	var serviceArns []string
+	paginator := ecs.NewListServicesPaginator(client, &ecs.ListServicesInput{
 		Cluster: aws.String(cluster),
+	}, func(o *ecs.ListServicesPaginatorOptions) {
+		// The paginator overwrites MaxResults on the input with its own Limit, so the page
+		// size has to be set here or every page comes back with the default 10 services.
+		o.Limit = listPageSize
+	})
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		serviceArns = append(serviceArns, page.ServiceArns...)
 	}
 
-	result, err := client.ListServices(ctx, input)
-	if err != nil {
-		return nil, err
+	return serviceArns, nil
+}
+
+// describeTasks fetches full detail for every task ARN, split into batches of the size
+// DescribeTasks accepts.
+func describeTasks(ctx context.Context, client ECSAPI, cluster string, taskARNs []string) ([]ecstypes.Task, error) {
+	var tasks []ecstypes.Task
+	for batch := range slices.Chunk(taskARNs, describeTasksBatchSize) {
+		results, err := client.DescribeTasks(ctx, &ecs.DescribeTasksInput{
+			Cluster: aws.String(cluster),
+			Tasks:   batch,
+		})
+		if err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, results.Tasks...)
 	}
 
-	return result.ServiceArns, nil
+	return tasks, nil
 }
 
 func fetchContainersFromTasks(ctx context.Context, client ECSAPI, cluster string, tasks []string) ([]reporter.Container, error) {
 	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Fetching Containers from tasks for cluster: %s", cluster))
-	input := &ecs.DescribeTasksInput{
-		Cluster: aws.String(cluster),
-		Tasks:   tasks,
-	}
 
-	results, err := client.DescribeTasks(ctx, input)
+	// Every task has to be described before the tag map is built: the map resolves image tags
+	// across the whole set, so building it per batch would drop tags that live in another batch.
+	describedTasks, err := describeTasks(ctx, client, cluster, tasks)
 	if err != nil {
 		return nil, err
 	}
-	containerTagMap := buildContainerTagMap(results.Tasks)
+
+	containerTagMap := buildContainerTagMap(describedTasks)
 	containers := []reporter.Container{}
-	for _, task := range results.Tasks {
+	for _, task := range describedTasks {
 		for _, container := range task.Containers {
 			digest := ""
 			if container.ImageDigest != nil {
@@ -180,18 +224,13 @@ func constructServiceARN(clusterARN string, serviceName string) (string, error) 
 }
 
 func fetchTasksMetadata(ctx context.Context, client ECSAPI, cluster string, tasks []string) ([]reporter.Task, error) {
-	input := &ecs.DescribeTasksInput{
-		Cluster: aws.String(cluster),
-		Tasks:   tasks,
-	}
-
-	results, err := client.DescribeTasks(ctx, input)
+	describedTasks, err := describeTasks(ctx, client, cluster, tasks)
 	if err != nil {
 		return nil, err
 	}
 
 	var tasksMetadata []reporter.Task
-	for _, task := range results.Tasks {
+	for _, task := range describedTasks {
 		// Tags may not be present in the task response so we need to fetch them explicitly
 		taskARN := ""
 		if task.TaskArn != nil {
@@ -235,18 +274,20 @@ func fetchTasksMetadata(ctx context.Context, client ECSAPI, cluster string, task
 }
 
 func fetchServicesMetadata(ctx context.Context, client ECSAPI, cluster string, services []string) ([]reporter.Service, error) {
-	input := &ecs.DescribeServicesInput{
-		Cluster:  aws.String(cluster),
-		Services: services,
-	}
-
-	results, err := client.DescribeServices(ctx, input)
-	if err != nil {
-		return nil, err
+	var describedServices []ecstypes.Service
+	for batch := range slices.Chunk(services, describeServicesBatchSize) {
+		results, err := client.DescribeServices(ctx, &ecs.DescribeServicesInput{
+			Cluster:  aws.String(cluster),
+			Services: batch,
+		})
+		if err != nil {
+			return nil, err
+		}
+		describedServices = append(describedServices, results.Services...)
 	}
 
 	var servicesMetadata []reporter.Service
-	for _, service := range results.Services {
+	for _, service := range describedServices {
 		// Tags may not be present in the service response so we need to fetch them explicitly
 		serviceARN := ""
 		if service.ServiceArn != nil {
