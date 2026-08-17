@@ -7,7 +7,9 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.43.4
 	github.com/aws/aws-sdk-go-v2/config v1.32.35
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.90.0
+	github.com/google/uuid v1.6.0
 	github.com/h2non/gock v1.2.0
+	github.com/hashicorp/go-version v1.9.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0

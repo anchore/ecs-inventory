@@ -28,4 +28,32 @@ region: $ANCHORE_ECS_INVENTORY_REGION
 # frequency of which to poll the region
 polling-interval-seconds: 300
 
+# frequency of which to send health reports to anchore enterprise, between 30 and 600
+# health-report-interval-seconds: 60
+
+# how this agent identifies itself when it registers as an integration with anchore
+# enterprise. anything left empty is derived from the ECS task metadata endpoint when the
+# agent runs as an ECS task, so these can be left as they are in ECS
+anchore-registration:
+  # a stable id for this agent. anchore enterprise identifies an agent by the pair
+  # (registration-id, registration-instance-id) and creates a new integration record for
+  # every pair it has not seen before, so both halves must be stable across restarts and
+  # unique per agent. in ECS this is derived from the task family, qualified with the
+  # agent's own AWS account, cluster and region; set it explicitly when not running as an
+  # ECS task, otherwise it is generated per run and every restart creates a new
+  # integration record
+  registration-id: ""
+
+  # what makes this agent unique among its replicas. in ECS this is derived from the ECS
+  # service name (or the task family), qualified with the agent's own AWS account, cluster
+  # and region. a value set here is used exactly as given and is not qualified, so make it
+  # unique per agent as well as stable
+  registration-instance-id: ""
+
+  # name shown for this integration in anchore enterprise
+  integration-name: ""
+
+  # description shown for this integration in anchore enterprise
+  integration-description: ""
+
 quiet: false

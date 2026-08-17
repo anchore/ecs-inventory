@@ -16,3 +16,11 @@ region: "us-east-1"
 polling-interval-seconds: 60
 
 quiet: true
+
+health-report-interval-seconds: 120
+
+anchore-registration:
+  registration-id: "test-registration-id"
+  registration-instance-id: "test-registration-instance-id"
+  integration-name: "test-integration-name"
+  integration-description: "test integration description"

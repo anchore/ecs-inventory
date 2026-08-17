@@ -16,6 +16,7 @@ type mockECSClient struct {
 	ErrorOnDescribeTasks       bool
 	ErrorOnListTagsForResource bool
 	ErrorOnDescribeServices    bool
+	NoTasks                    bool // an empty cluster: no tasks, and so no containers
 }
 
 func (m *mockECSClient) ListClusters(ctx context.Context, _ *ecs.ListClustersInput, _ ...func(*ecs.Options)) (*ecs.ListClustersOutput, error) {
@@ -33,6 +34,9 @@ func (m *mockECSClient) ListClusters(ctx context.Context, _ *ecs.ListClustersInp
 func (m *mockECSClient) ListTasks(ctx context.Context, _ *ecs.ListTasksInput, _ ...func(*ecs.Options)) (*ecs.ListTasksOutput, error) {
 	if m.ErrorOnListTasks {
 		return nil, errors.New("list tasks error")
+	}
+	if m.NoTasks {
+		return &ecs.ListTasksOutput{}, nil
 	}
 	return &ecs.ListTasksOutput{
 		TaskArns: []string{

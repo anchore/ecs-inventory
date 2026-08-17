@@ -40,6 +40,13 @@ func TestLoadConfigFromFileCliConfigPath(t *testing.T) {
 		Region:                 "us-east-1",
 		PollingIntervalSeconds: 60,
 		Quiet:                  true,
+		Registration: RegistrationOptions{
+			RegistrationID:         "test-registration-id",
+			RegistrationInstanceID: "test-registration-instance-id",
+			IntegrationName:        "test-integration-name",
+			IntegrationDescription: "test integration description",
+		},
+		HealthReportIntervalSeconds: 120,
 	}
 
 	assert.EqualValues(t, expectedCfg, appCfg)
@@ -80,6 +87,7 @@ func TestPasswordsAreObfuscated(t *testing.T) {
 			Account:  "admin",
 			HTTP:     connection.HTTPConfig{},
 		},
+		HealthReportIntervalSeconds: 60,
 	}
 
 	expected := `log:
@@ -100,9 +108,42 @@ anchoredetails:
 region: ""
 quiet: false
 dryrun: false
+registration:
+  registrationid: ""
+  registrationinstanceid: ""
+  integrationname: ""
+  integrationdescription: ""
+healthreportintervalseconds: 60
 `
 
 	assert.Equal(t, expected, config.String())
+}
+
+func TestHealthReportIntervalIsValidated(t *testing.T) {
+	tests := []struct {
+		name    string
+		seconds int
+		wantErr bool
+	}{
+		{name: "below lower bound", seconds: 29, wantErr: true},
+		{name: "lower bound", seconds: 30, wantErr: false},
+		{name: "default", seconds: 60, wantErr: false},
+		{name: "upper bound", seconds: 600, wantErr: false},
+		{name: "above upper bound", seconds: 601, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := AppConfig{HealthReportIntervalSeconds: tt.seconds}
+
+			err := cfg.Build()
+
+			if tt.wantErr {
+				assert.ErrorContains(t, err, "health-report-interval-seconds must be between 30 and 600")
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestDefaultValuesSuppliedForEmptyConfig(t *testing.T) {
@@ -132,9 +173,35 @@ func TestDefaultValuesSuppliedForEmptyConfig(t *testing.T) {
 				TimeoutSeconds: 60,
 			},
 		},
+		HealthReportIntervalSeconds: 60,
 	}
 
 	assert.EqualValues(t, expectedCfg, appCfg)
+}
+
+// viper's AutomaticEnv only resolves keys it already knows about, so every option has
+// to be registered as a default for the documented ANCHORE_ECS_INVENTORY_ overrides to
+// reach it.
+func TestRegistrationOptionsCanBeSetByEnvironment(t *testing.T) {
+	t.Cleanup(cleanup)
+
+	t.Setenv("ANCHORE_ECS_INVENTORY_ANCHORE_REGISTRATION_REGISTRATION_ID", "id-from-env")
+	t.Setenv("ANCHORE_ECS_INVENTORY_ANCHORE_REGISTRATION_REGISTRATION_INSTANCE_ID", "instance-id-from-env")
+	t.Setenv("ANCHORE_ECS_INVENTORY_ANCHORE_REGISTRATION_INTEGRATION_NAME", "name-from-env")
+	t.Setenv("ANCHORE_ECS_INVENTORY_ANCHORE_REGISTRATION_INTEGRATION_DESCRIPTION", "description-from-env")
+	t.Setenv("ANCHORE_ECS_INVENTORY_HEALTH_REPORT_INTERVAL_SECONDS", "45")
+
+	cliOpts := CliOnlyOptions{ConfigPath: "testdata/empty_config.yaml"}
+	appCfg, err := LoadConfigFromFile(viper.GetViper(), &cliOpts)
+	assert.NoError(t, err)
+
+	assert.Equal(t, RegistrationOptions{
+		RegistrationID:         "id-from-env",
+		RegistrationInstanceID: "instance-id-from-env",
+		IntegrationName:        "name-from-env",
+		IntegrationDescription: "description-from-env",
+	}, appCfg.Registration)
+	assert.Equal(t, 45, appCfg.HealthReportIntervalSeconds)
 }
 
 func TestCliOptsOverrideConfigFileOpts(t *testing.T) {

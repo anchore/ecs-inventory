@@ -13,6 +13,7 @@ import (
 
 	"github.com/anchore/ecs-inventory/internal/logger"
 	"github.com/anchore/ecs-inventory/pkg/connection"
+	"github.com/anchore/ecs-inventory/pkg/healthreporter"
 	"github.com/anchore/ecs-inventory/pkg/reporter"
 )
 
@@ -403,4 +404,96 @@ func Test_ensureReferencedObjectsExist(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func Test_reportCluster(t *testing.T) {
+	const cluster = "arn:aws:ecs:us-east-1:123456789012:cluster/cluster-1"
+
+	anchoreDetails := connection.AnchoreInfo{
+		URL:      "https://ancho.re",
+		User:     "admin",
+		Password: "foobar",
+		Account:  "test-account",
+		HTTP: connection.HTTPConfig{
+			TimeoutSeconds: 10,
+			Insecure:       true,
+		},
+	}
+
+	t.Run("successful send is recorded as healthy", func(t *testing.T) {
+		defer gock.Off()
+		gock.New("https://ancho.re").
+			Post("v2/ecs-inventory").
+			Reply(201).
+			JSON(map[string]interface{}{})
+
+		info, recorded := reportCluster(context.Background(), cluster, "us-east-1", &mockECSClient{},
+			anchoreDetails, true, false)
+
+		require.True(t, recorded)
+		assert.Equal(t, cluster, info.ClusterARN)
+		assert.Equal(t, "us-east-1", info.Region)
+		assert.Equal(t, "test-account", info.Account)
+		assert.Equal(t, "admin", info.SentAsUser)
+		assert.Equal(t, 1, info.BatchSize)
+		assert.Equal(t, 1, info.LastSuccessfulIndex)
+		assert.False(t, info.HasErrors)
+		require.Len(t, info.Batches, 1)
+		assert.Equal(t, 1, info.Batches[0].BatchIndex)
+		assert.Empty(t, info.Batches[0].Error)
+		assert.NotEmpty(t, info.ReportTimestamp)
+	})
+
+	t.Run("failed send is recorded with an error", func(t *testing.T) {
+		defer gock.Off()
+		gock.New("https://ancho.re").
+			Post("v2/ecs-inventory").
+			Reply(500).
+			JSON(map[string]interface{}{})
+
+		info, recorded := reportCluster(context.Background(), cluster, "us-east-1", &mockECSClient{},
+			anchoreDetails, true, false)
+
+		require.True(t, recorded)
+		assert.True(t, info.HasErrors)
+		assert.Equal(t, -1, info.LastSuccessfulIndex)
+		require.Len(t, info.Batches, 1)
+		// Enterprise reports "send failed, no error detail reported" if this is empty
+		assert.NotEmpty(t, info.Batches[0].Error)
+	})
+
+	t.Run("gather failure is recorded with an error", func(t *testing.T) {
+		info, recorded := reportCluster(context.Background(), cluster, "us-east-1",
+			&mockECSClient{ErrorOnListTasks: true}, anchoreDetails, true, false)
+
+		require.True(t, recorded)
+		assert.True(t, info.HasErrors)
+		assert.Equal(t, -1, info.LastSuccessfulIndex)
+		require.Len(t, info.Batches, 1)
+		assert.Contains(t, info.Batches[0].Error, "list tasks error")
+		assert.NotEmpty(t, info.ReportTimestamp)
+	})
+
+	t.Run("empty cluster is not recorded at all", func(t *testing.T) {
+		info, recorded := reportCluster(context.Background(), cluster, "us-east-1",
+			&mockECSClient{NoTasks: true}, anchoreDetails, true, false)
+
+		assert.False(t, recorded, "a cluster with no containers is never sent, so there is nothing to report on")
+		assert.Equal(t, healthreporter.InventoryReportInfo{}, info)
+	})
+
+	t.Run("batches never marshals to null", func(t *testing.T) {
+		defer gock.Off()
+		gock.New("https://ancho.re").
+			Post("v2/ecs-inventory").
+			Reply(201).
+			JSON(map[string]interface{}{})
+
+		info, _ := reportCluster(context.Background(), cluster, "us-east-1", &mockECSClient{},
+			anchoreDetails, true, false)
+
+		marshalled, err := json.Marshal(info)
+		require.NoError(t, err)
+		assert.NotContains(t, string(marshalled), `"batches":null`)
+	})
 }

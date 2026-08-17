@@ -6,13 +6,15 @@ import (
 	"runtime"
 )
 
-const valueNotProvided = "[not provided]"
+// ValueNotProvided is the placeholder used for build values that were not
+// injected at link time (i.e. a local, non-release build).
+const ValueNotProvided = "[not provided]"
 
 var (
-	version        = valueNotProvided
-	gitCommit      = valueNotProvided
-	gitDescription = valueNotProvided
-	buildDate      = valueNotProvided
+	version        = ValueNotProvided
+	gitCommit      = ValueNotProvided
+	gitDescription = ValueNotProvided
+	buildDate      = ValueNotProvided
 	platform       = fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
 )
 
