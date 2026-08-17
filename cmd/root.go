@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/anchore/ecs-inventory/internal/config"
 	"github.com/anchore/ecs-inventory/pkg"
+	"github.com/anchore/ecs-inventory/pkg/healthreporter"
+	"github.com/anchore/ecs-inventory/pkg/integration"
 	"github.com/anchore/ecs-inventory/pkg/reporter"
 )
 
@@ -59,12 +62,42 @@ var rootCmd = &cobra.Command{
 			log.Warn("Anchore details not specified, will not report inventory")
 		}
 
+		ch := integration.GetChannels()
+		gatedReportInfo := healthreporter.GetGatedReportInfo()
+
+		if appConfig.DryRun {
+			// Registering a dry run agent as a live integration in Anchore would be wrong,
+			// so skip registration and health reporting entirely
+			log.Info("Dry run specified, not registering with Anchore or sending health reports")
+			integration.EnableInventoryReportingOnly(ch)
+		} else {
+			go healthreporter.PeriodicallySendHealthReport(appConfig, ch, gatedReportInfo)
+
+			// Registration retries an unreachable Anchore for as long as it takes, so it
+			// runs alongside inventory reporting rather than gating it. Failing to
+			// register is never fatal: the agent's primary job is reporting inventory,
+			// which does not depend on registration, and an Enterprise that predates ECS
+			// agent support rejects registration outright.
+			go func() {
+				if _, err := integration.PerformRegistration(appConfig, ch); err != nil {
+					if errors.Is(err, integration.ErrRegistrationUnsupported) {
+						log.Warn("This Anchore Enterprise does not support ECS inventory agent health reporting, continuing with inventory reporting only")
+					} else {
+						log.Error("Failed to register with Anchore, continuing with inventory reporting only", err)
+					}
+				}
+			}()
+		}
+
+		// runs for the life of the process
 		pkg.PeriodicallyGetInventoryReport(
 			appConfig.PollingIntervalSeconds,
 			appConfig.AnchoreDetails,
 			appConfig.Region,
 			appConfig.Quiet,
 			appConfig.DryRun,
+			ch,
+			gatedReportInfo,
 		)
 	},
 }

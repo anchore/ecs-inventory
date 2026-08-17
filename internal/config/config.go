@@ -26,6 +26,12 @@ import (
 
 const redacted = "******"
 
+// Bounds for health-report-interval-seconds, matching anchore-k8s-inventory.
+const (
+	minHealthReportIntervalSeconds = 30
+	maxHealthReportIntervalSeconds = 600
+)
+
 // Configuration options that may only be specified on the command line
 type CliOnlyOptions struct {
 	ConfigPath string
@@ -40,6 +46,24 @@ type AppConfig struct {
 	Region                 string                 `mapstructure:"region"`
 	Quiet                  bool                   `mapstructure:"quiet"`   // if true do not log the inventory report to stdout
 	DryRun                 bool                   `mapstructure:"dry-run"` // if true do not report inventory to Anchore
+	// Registration holds the values this agent identifies itself with when it registers
+	// as an integration with Anchore Enterprise
+	Registration RegistrationOptions `mapstructure:"anchore-registration"`
+	// HealthReportIntervalSeconds is the time in seconds between health reports sent to
+	// Anchore Enterprise
+	HealthReportIntervalSeconds int `mapstructure:"health-report-interval-seconds"`
+}
+
+// RegistrationOptions are the integration registration values that can be overridden
+// via config. Anything left empty is derived at runtime (see pkg/integration).
+type RegistrationOptions struct {
+	RegistrationID string `mapstructure:"registration-id"`
+	// RegistrationInstanceID distinguishes this agent from its replicas. Anchore
+	// Enterprise keys an integration on the pair (registration-id,
+	// registration-instance-id), so this must be stable across restarts too.
+	RegistrationInstanceID string `mapstructure:"registration-instance-id"`
+	IntegrationName        string `mapstructure:"integration-name"`
+	IntegrationDescription string `mapstructure:"integration-description"`
 }
 
 // Logging Configuration
@@ -60,10 +84,11 @@ var DefaultConfigValues = AppConfig{
 			TimeoutSeconds: 60,
 		},
 	},
-	Region:                 "",
-	PollingIntervalSeconds: 300,
-	Quiet:                  false,
-	DryRun:                 false,
+	Region:                      "",
+	PollingIntervalSeconds:      300,
+	Quiet:                       false,
+	DryRun:                      false,
+	HealthReportIntervalSeconds: 60,
 }
 
 var ErrConfigFileNotFound = fmt.Errorf("application config file not found")
@@ -74,6 +99,15 @@ func setDefaultValues(v *viper.Viper) {
 	v.SetDefault("anchore.account", DefaultConfigValues.AnchoreDetails.Account)
 	v.SetDefault("anchore.http.insecure", DefaultConfigValues.AnchoreDetails.HTTP.Insecure)
 	v.SetDefault("anchore.http.timeout-seconds", DefaultConfigValues.AnchoreDetails.HTTP.TimeoutSeconds)
+	v.SetDefault("health-report-interval-seconds", DefaultConfigValues.HealthReportIntervalSeconds)
+	// AutomaticEnv only resolves keys viper already knows about (Unmarshal walks
+	// AllKeys()), so a key that appears in neither the defaults nor the config file
+	// cannot be set by environment variable at all. These are empty by default and
+	// derived at runtime, but they still need registering to be overridable.
+	v.SetDefault("anchore-registration.registration-id", DefaultConfigValues.Registration.RegistrationID)
+	v.SetDefault("anchore-registration.registration-instance-id", DefaultConfigValues.Registration.RegistrationInstanceID)
+	v.SetDefault("anchore-registration.integration-name", DefaultConfigValues.Registration.IntegrationName)
+	v.SetDefault("anchore-registration.integration-description", DefaultConfigValues.Registration.IntegrationDescription)
 }
 
 // Load the Application Configuration from the Viper specifications
@@ -131,6 +165,12 @@ func (cfg *AppConfig) Build() error {
 		default:
 			cfg.Log.Level = "info"
 		}
+	}
+
+	if cfg.HealthReportIntervalSeconds < minHealthReportIntervalSeconds ||
+		cfg.HealthReportIntervalSeconds > maxHealthReportIntervalSeconds {
+		return fmt.Errorf("health-report-interval-seconds must be between %d and %d, got %d",
+			minHealthReportIntervalSeconds, maxHealthReportIntervalSeconds, cfg.HealthReportIntervalSeconds)
 	}
 
 	return nil

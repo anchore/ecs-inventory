@@ -12,8 +12,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 
 	"github.com/anchore/ecs-inventory/internal/logger"
+	jstime "github.com/anchore/ecs-inventory/internal/time"
 	"github.com/anchore/ecs-inventory/internal/tracker"
 	"github.com/anchore/ecs-inventory/pkg/connection"
+	"github.com/anchore/ecs-inventory/pkg/healthreporter"
 	"github.com/anchore/ecs-inventory/pkg/reporter"
 )
 
@@ -46,8 +48,16 @@ func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo,
 	return nil
 }
 
-// GetInventoryReportsForRegion collects inventory reports for a specified region.
-func GetInventoryReportsForRegion(region string, anchoreDetails connection.AnchoreInfo, quiet, dryRun bool) error {
+// GetInventoryReportsForRegion collects inventory reports for a specified region and
+// returns what happened for each cluster, for inclusion in the next health report.
+//
+// Errors that abort the whole region (AWS config, credentials, listing clusters) are
+// returned; per-cluster failures are recorded in the returned results instead.
+func GetInventoryReportsForRegion(
+	region string,
+	anchoreDetails connection.AnchoreInfo,
+	quiet, dryRun bool,
+) ([]healthreporter.InventoryReportInfo, error) {
 	ctx := context.Background()
 	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Getting Inventory Reports for region: %s", region))
 	logger.Log.Info("Getting Inventory Reports for region", "region", region)
@@ -60,22 +70,26 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 	cfg, err := config.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		logger.Log.Error("Failed to load AWS config", err)
-		return fmt.Errorf("failed to load aws config: %w", err)
+		return nil, fmt.Errorf("failed to load aws config: %w", err)
 	}
 
 	err = checkAWSCredentials(ctx, cfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ecsClient := ecs.NewFromConfig(cfg)
 
 	clusters, err := fetchClusters(ctx, ecsClient)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	var wg sync.WaitGroup
+	var (
+		wg          sync.WaitGroup
+		resultsLock sync.Mutex
+		results     []healthreporter.InventoryReportInfo
+	)
 	wg.Add(len(clusters))
 
 	for _, cluster := range clusters {
@@ -84,25 +98,85 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 			defer wg.Done()
 
 			// You can reuse ecsClient; keeping same behavior as before
-			report, err := GetInventoryReportForCluster(ctx, cluster, ecsClient)
-			if err != nil {
-				logger.Log.Error("Failed to get inventory report for cluster", err)
+			info, recorded := reportCluster(ctx, cluster, region, ecsClient, anchoreDetails, quiet, dryRun)
+			if !recorded {
+				return
 			}
 
-			// Only report if there are containers present in the cluster
-			if len(report.Containers) != 0 {
-				err = HandleReport(report, anchoreDetails, quiet, dryRun)
-				if err != nil {
-					logger.Log.Error("Failed to report inventory for cluster", err)
-					jsonReport, _ := json.Marshal(report)
-					logger.Log.Error("Failed payload", fmt.Errorf("report %s", jsonReport))
-				}
-			}
+			// This mutex is local to the poll cycle and never touched by the health
+			// reporting goroutine, so a plain Lock cannot stall health reports.
+			resultsLock.Lock()
+			defer resultsLock.Unlock()
+			results = append(results, info)
 		}(cluster)
 	}
 
 	wg.Wait()
-	return nil
+	return results, nil
+}
+
+// reportCluster gathers and sends one cluster's inventory report, returning what
+// happened. The second return value is false when there is nothing worth reporting on
+// (an empty cluster is never sent, so claiming either success or failure for it would
+// be misleading).
+func reportCluster(
+	ctx context.Context,
+	cluster, region string,
+	ecsClient ECSAPI,
+	anchoreDetails connection.AnchoreInfo,
+	quiet, dryRun bool,
+) (healthreporter.InventoryReportInfo, bool) {
+	info := healthreporter.InventoryReportInfo{
+		Account:             anchoreDetails.Account,
+		SentAsUser:          anchoreDetails.User,
+		ClusterARN:          cluster,
+		Region:              region,
+		BatchSize:           1, // ECS sends one inventory report per cluster
+		LastSuccessfulIndex: -1,
+		HasErrors:           false,
+		// must never marshal to null, Enterprise requires a list here
+		Batches: make([]healthreporter.BatchInfo, 0, 1),
+	}
+
+	report, err := GetInventoryReportForCluster(ctx, cluster, ecsClient)
+	if err != nil {
+		// An AWS-side failure (throttling, expired credentials, a missing
+		// ecs:DescribeTasks permission) is exactly what health reporting exists to
+		// surface, so record it rather than only logging it.
+		logger.Log.Error("Failed to get inventory report for cluster", err, "cluster", cluster)
+		info.ReportTimestamp = time.Now().UTC().Format(time.RFC3339)
+		info.HasErrors = true
+		info.Batches = append(info.Batches, healthreporter.BatchInfo{
+			BatchIndex:    1,
+			SendTimestamp: jstime.Datetime{Time: time.Now().UTC()},
+			Error:         err.Error(),
+		})
+		return info, true
+	}
+
+	// Only report if there are containers present in the cluster
+	if len(report.Containers) == 0 {
+		return healthreporter.InventoryReportInfo{}, false
+	}
+
+	info.ReportTimestamp = report.Timestamp
+	batch := healthreporter.BatchInfo{
+		BatchIndex:    1,
+		SendTimestamp: jstime.Datetime{Time: time.Now().UTC()},
+	}
+
+	if err := HandleReport(report, anchoreDetails, quiet, dryRun); err != nil {
+		logger.Log.Error("Failed to report inventory for cluster", err, "cluster", cluster)
+		jsonReport, _ := json.Marshal(report)
+		logger.Log.Error("Failed payload", fmt.Errorf("report %s", jsonReport))
+		batch.Error = err.Error()
+		info.HasErrors = true
+	} else {
+		info.LastSuccessfulIndex = 1
+	}
+
+	info.Batches = append(info.Batches, batch)
+	return info, true
 }
 
 // ensures that the referenced objects in the report exist, and if not, creates them.
