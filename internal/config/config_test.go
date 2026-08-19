@@ -1,13 +1,94 @@
 package config
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/anchore/ecs-inventory/pkg/connection"
+	"github.com/anchore/ecs-inventory/pkg/inventory"
 )
+
+func TestBuildAssumeRoles(t *testing.T) {
+	roles := func(n int) []inventory.AssumeRole {
+		out := make([]inventory.AssumeRole, n)
+		for i := range out {
+			out[i] = inventory.AssumeRole{ARN: fmt.Sprintf("arn:aws:iam::00000000000%d:role/anchore", i)}
+		}
+		return out
+	}
+
+	tests := []struct {
+		name      string
+		cfg       AppConfig
+		wantErr   string
+		wantRoles []inventory.AssumeRole
+	}{
+		{
+			name:      "no roles configured",
+			cfg:       AppConfig{},
+			wantRoles: nil,
+		},
+		{
+			name: "single role flag folds into the list",
+			cfg:  AppConfig{AssumeRoleARN: "arn:aws:iam::111111111111:role/anchore", ExternalID: "ext-1"},
+			wantRoles: []inventory.AssumeRole{
+				{ARN: "arn:aws:iam::111111111111:role/anchore", ExternalID: "ext-1"},
+			},
+		},
+		{
+			name: "single role flag appends to a configured list",
+			cfg: AppConfig{
+				AssumeRoles:   []inventory.AssumeRole{{ARN: "arn:aws:iam::111111111111:role/anchore"}},
+				AssumeRoleARN: "arn:aws:iam::222222222222:role/anchore",
+			},
+			wantRoles: []inventory.AssumeRole{
+				{ARN: "arn:aws:iam::111111111111:role/anchore"},
+				{ARN: "arn:aws:iam::222222222222:role/anchore"},
+			},
+		},
+		{
+			name:      "at the cap is allowed",
+			cfg:       AppConfig{AssumeRoles: roles(inventory.MaxAssumeRoles)},
+			wantRoles: roles(inventory.MaxAssumeRoles),
+		},
+		{
+			name:    "over the cap is rejected",
+			cfg:     AppConfig{AssumeRoles: roles(inventory.MaxAssumeRoles + 1)},
+			wantErr: "at most 5 are supported",
+		},
+		{
+			// the flag pushing a full list over the cap must be caught too
+			name: "at the cap plus the single role flag is rejected",
+			cfg: AppConfig{
+				AssumeRoles:   roles(inventory.MaxAssumeRoles),
+				AssumeRoleARN: "arn:aws:iam::999999999999:role/anchore",
+			},
+			wantErr: "at most 5 are supported",
+		},
+		{
+			name:    "role without an arn is rejected",
+			cfg:     AppConfig{AssumeRoles: []inventory.AssumeRole{{ExternalID: "ext-1"}}},
+			wantErr: "assume-roles[0] has no arn",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := tt.cfg
+			err := cfg.buildAssumeRoles()
+
+			if tt.wantErr != "" {
+				assert.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantRoles, cfg.AssumeRoles)
+		})
+	}
+}
 
 func TestLoadConfigFromFileCliConfigPath(t *testing.T) {
 	t.Cleanup(cleanup)
@@ -37,7 +118,11 @@ func TestLoadConfigFromFileCliConfigPath(t *testing.T) {
 				TimeoutSeconds: 10,
 			},
 		},
-		Region:                 "us-east-1",
+		Region: "us-east-1",
+		AssumeRoles: []inventory.AssumeRole{
+			{ARN: "arn:aws:iam::111111111111:role/anchore-ecs-inventory", ExternalID: "test-external-id"},
+			{ARN: "arn:aws:iam::222222222222:role/anchore-ecs-inventory"},
+		},
 		PollingIntervalSeconds: 60,
 		Quiet:                  true,
 	}
@@ -98,6 +183,9 @@ anchoredetails:
     insecure: false
     timeoutseconds: 0
 region: ""
+assumeroles: []
+assumerolearn: ""
+externalid: ""
 quiet: false
 dryrun: false
 `

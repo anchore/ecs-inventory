@@ -3,14 +3,19 @@ package inventory
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 
+	"github.com/anchore/ecs-inventory/internal"
 	"github.com/anchore/ecs-inventory/internal/logger"
 	"github.com/anchore/ecs-inventory/internal/tracker"
 	"github.com/anchore/ecs-inventory/pkg/connection"
@@ -46,13 +51,94 @@ func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo,
 	return nil
 }
 
+// MaxAssumeRoles bounds how many roles a single agent will assume in one poll.
+// This is a deliberate product limit, not an AWS one: it is the number of roles the
+// suite is tested against, and running beyond it would put customers on untested ground.
+// Raising it means extending the test plan first.
+const MaxAssumeRoles = 5
+
+// AssumeRole identifies an IAM role that anchore-ecs-inventory will assume (via STS) before
+// querying ECS. The role may live in the same AWS account or a different one, provided its
+// trust policy permits the agent's base credentials to assume it.
+type AssumeRole struct {
+	ARN string `mapstructure:"arn"`
+	// ExternalID is passed when assuming ARN. Some roles (commonly cross-account, third-party
+	// roles) require an external ID in their trust policy. Optional.
+	ExternalID string `mapstructure:"external-id"`
+}
+
+// assumeRoleOptions builds the STS assume-role options used when AssumeRoleARN is configured.
+// ponytail: returned as a func rather than inlined at the call site because stscreds keeps its
+// options unexported — applying this to a zero AssumeRoleOptions is the only way to assert the wiring.
+func assumeRoleOptions(externalID string) func(*stscreds.AssumeRoleOptions) {
+	return func(o *stscreds.AssumeRoleOptions) {
+		o.RoleSessionName = internal.ApplicationName
+		if externalID != "" {
+			o.ExternalID = aws.String(externalID)
+		}
+	}
+}
+
+// withAssumeRole swaps cfg's credentials for STS assume-role credentials when assumeRoleARN is set,
+// and returns cfg untouched when it is not. The credentials cache resolves them lazily and refreshes
+// them automatically as they expire, which suits the long-running daemon. The role may live in the
+// same AWS account or a different one.
+// ponytail: split out of GetInventoryReportsForRegion so the credential wiring is unit testable
+// without reaching AWS; that function loads real config and calls ECS.
+func withAssumeRole(cfg aws.Config, assumeRoleARN, externalID string) aws.Config {
+	if assumeRoleARN == "" {
+		return cfg
+	}
+	logger.Log.Info("Assuming IAM role for ECS inventory", "roleArn", assumeRoleARN)
+	provider := stscreds.NewAssumeRoleProvider(sts.NewFromConfig(cfg), assumeRoleARN, assumeRoleOptions(externalID))
+	cfg.Credentials = aws.NewCredentialsCache(provider)
+	return cfg
+}
+
 // GetInventoryReportsForRegion collects inventory reports for a specified region.
-func GetInventoryReportsForRegion(region string, anchoreDetails connection.AnchoreInfo, quiet, dryRun bool) error {
+//
+// With no roles configured the agent inventories the region using its own credentials.
+// With roles configured it inventories the region once per role, so a single agent can cover
+// several AWS accounts. A role that fails is logged and skipped rather than aborting the poll:
+// one unreachable account must not cost the customer inventory for the accounts that do work.
+func GetInventoryReportsForRegion(region string, assumeRoles []AssumeRole, anchoreDetails connection.AnchoreInfo, quiet, dryRun bool) error {
 	ctx := context.Background()
 	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Getting Inventory Reports for region: %s", region))
 	logger.Log.Info("Getting Inventory Reports for region", "region", region)
 
-	// Load AWS config
+	cfg, err := loadAWSConfig(ctx, region)
+	if err != nil {
+		return err
+	}
+
+	if len(assumeRoles) == 0 {
+		return reportForCredentials(ctx, cfg, anchoreDetails, quiet, dryRun)
+	}
+
+	return reportForEachRole(assumeRoles, func(role AssumeRole) error {
+		return reportForCredentials(ctx, withAssumeRole(cfg, role.ARN, role.ExternalID), anchoreDetails, quiet, dryRun)
+	})
+}
+
+// reportForEachRole runs report for every configured role, continuing past failures, and returns
+// the joined failures (nil if every role succeeded). Continuing matters: one account with a broken
+// trust policy must not cost the customer inventory for the accounts that are working.
+// ponytail: sequential — MaxAssumeRoles is 5, so the wall-clock saving from running accounts
+// concurrently is not worth multiplying peak STS/ECS call volume. Revisit if the cap is raised.
+// ponytail: takes report as a func so the continue-on-failure behaviour is testable without AWS.
+func reportForEachRole(roles []AssumeRole, report func(AssumeRole) error) error {
+	var errs []error
+	for _, role := range roles {
+		if err := report(role); err != nil {
+			logger.Log.Error("Failed to get inventory reports for assumed role", err, "roleArn", role.ARN)
+			errs = append(errs, fmt.Errorf("role %s: %w", role.ARN, err))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// loadAWSConfig resolves the agent's own AWS config for the given region.
+func loadAWSConfig(ctx context.Context, region string) (aws.Config, error) {
 	opts := []func(*config.LoadOptions) error{}
 	if region != "" {
 		opts = append(opts, config.WithRegion(region))
@@ -60,10 +146,16 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 	cfg, err := config.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		logger.Log.Error("Failed to load AWS config", err)
-		return fmt.Errorf("failed to load aws config: %w", err)
+		return aws.Config{}, fmt.Errorf("failed to load aws config: %w", err)
 	}
+	return cfg, nil
+}
 
-	err = checkAWSCredentials(ctx, cfg)
+// reportForCredentials inventories every cluster reachable with the given AWS config and reports
+// it to Anchore. Split out of GetInventoryReportsForRegion so the same work can be repeated once
+// per assumed role.
+func reportForCredentials(ctx context.Context, cfg aws.Config, anchoreDetails connection.AnchoreInfo, quiet, dryRun bool) error {
+	err := checkAWSCredentials(ctx, cfg)
 	if err != nil {
 		return err
 	}

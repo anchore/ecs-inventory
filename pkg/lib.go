@@ -16,13 +16,14 @@ func PeriodicallyGetInventoryReport(
 	pollingIntervalSeconds int,
 	anchoreDetails connection.AnchoreInfo,
 	region string,
+	assumeRoles []inventory.AssumeRole,
 	quiet, dryRun bool,
 ) {
 	// Fire off a ticker that reports according to a configurable polling interval
 	ticker := time.NewTicker(time.Duration(pollingIntervalSeconds) * time.Second)
 
 	for {
-		err := inventory.GetInventoryReportsForRegion(region, anchoreDetails, quiet, dryRun)
+		err := inventory.GetInventoryReportsForRegion(region, assumeRoles, anchoreDetails, quiet, dryRun)
 		if err != nil {
 			log.Error("Failed to get Inventory Reports for region", err)
 		}

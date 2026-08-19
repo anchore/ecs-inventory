@@ -24,8 +24,10 @@ Available Commands:
   version     show the version
 
 Flags:
+  -a, --assume-role-arn string            if set, the ARN of an IAM role to assume (via STS) before querying ECS; may be in the same or a different AWS account
   -c, --config string                     application config file
   -d, --dry-run                           do not report inventory to Anchore
+  -e, --external-id string                optional external ID to use when assuming --assume-role-arn (required by some cross-account role trust policies)
   -h, --help                              help for anchore-ecs-inventory
   -p, --polling-interval-seconds string   this specifies the polling interval of the ECS API in seconds (default "300")
   -q, --quiet                             suppresses inventory report output to stdout
@@ -88,6 +90,13 @@ anchore:
 # the aws region
 region: $ANCHORE_ECS_INVENTORY_REGION
 
+# optional: IAM roles to assume before querying ECS, so that one agent can report on
+# several AWS accounts. See "Reporting on multiple AWS accounts" below.
+assume-roles:
+  - arn: "arn:aws:iam::111111111111:role/anchore-ecs-inventory"
+    external-id: "optional-external-id"
+  - arn: "arn:aws:iam::222222222222:role/anchore-ecs-inventory"
+
 # frequency of which to poll the region
 polling-interval-seconds: 300
 
@@ -98,6 +107,47 @@ You can also override any configuration value with environment variables. They
 must be prefixed with `ANCHORE_ECS_INVENTORY_` and be in all caps. For example,
 `ANCHORE_ECS_INVENTORY_LOG_LEVEL=error` would override the `log.level`
 configuration
+
+### Reporting on multiple AWS accounts
+
+A single agent can inventory ECS in other AWS accounts by assuming a role in each
+of them, rather than running one agent per account. List the roles under
+`assume-roles`:
+
+```yaml
+region: us-east-1
+
+assume-roles:
+  - arn: "arn:aws:iam::111111111111:role/anchore-ecs-inventory"
+    external-id: "optional-external-id"
+  - arn: "arn:aws:iam::222222222222:role/anchore-ecs-inventory"
+```
+
+Each poll inventories `region` once per role. Reports are keyed by cluster ARN,
+which already contains the account ID, so accounts remain distinct in Anchore
+without further configuration.
+
+Requirements:
+
+- The agent's own credentials need `sts:AssumeRole` on every listed role ARN.
+- Each target role's trust policy must permit the agent's identity to assume it,
+  and must grant the ECS read permissions the agent needs in that account.
+- `external-id` is optional per role, and is required only when the target role's
+  trust policy specifies one.
+- Every role is inventoried in the single configured `region`. Covering several
+  regions still requires one agent per region.
+
+A role that cannot be assumed is logged and skipped — the remaining accounts are
+still inventoried, so one broken trust policy does not stop the rest.
+
+**At most 5 roles may be configured**, and the agent will refuse to start above
+that. This is the number of roles the release is tested against; it is a
+deliberate limit rather than an AWS one.
+
+For a single account, `--assume-role-arn` and `--external-id` are equivalent to a
+one-entry `assume-roles` list. Unlike the list, they can be set as flags or
+environment variables, which suits deployments that configure the agent without
+mounting a config file.
 
 ## Releasing
 

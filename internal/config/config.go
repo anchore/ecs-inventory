@@ -22,6 +22,7 @@ import (
 
 	"github.com/anchore/ecs-inventory/internal"
 	"github.com/anchore/ecs-inventory/pkg/connection"
+	"github.com/anchore/ecs-inventory/pkg/inventory"
 )
 
 const redacted = "******"
@@ -38,8 +39,20 @@ type AppConfig struct {
 	PollingIntervalSeconds int                    `mapstructure:"polling-interval-seconds"`
 	AnchoreDetails         connection.AnchoreInfo `mapstructure:"anchore"`
 	Region                 string                 `mapstructure:"region"`
-	Quiet                  bool                   `mapstructure:"quiet"`   // if true do not log the inventory report to stdout
-	DryRun                 bool                   `mapstructure:"dry-run"` // if true do not report inventory to Anchore
+	// AssumeRoles lists the IAM roles to assume before querying ECS, letting one agent inventory
+	// several AWS accounts. Capped at inventory.MaxAssumeRoles. Config-file only — viper cannot
+	// bind a list of objects from a single environment variable, so single-role deployments that
+	// configure the agent purely through env vars should use AssumeRoleARN below.
+	AssumeRoles []inventory.AssumeRole `mapstructure:"assume-roles"`
+	// AssumeRoleARN configures a single role to assume, equivalent to a one-entry AssumeRoles.
+	// It exists because it is bindable to a CLI flag and an environment variable, which
+	// AssumeRoles is not; Build folds it into AssumeRoles.
+	AssumeRoleARN string `mapstructure:"assume-role-arn"`
+	// ExternalID, if set, is passed when assuming AssumeRoleARN. Some roles (commonly cross-account,
+	// third-party roles) require an external ID in their trust policy. Ignored when AssumeRoleARN is empty.
+	ExternalID string `mapstructure:"external-id"`
+	Quiet      bool   `mapstructure:"quiet"`   // if true do not log the inventory report to stdout
+	DryRun     bool   `mapstructure:"dry-run"` // if true do not report inventory to Anchore
 }
 
 // Logging Configuration
@@ -61,6 +74,8 @@ var DefaultConfigValues = AppConfig{
 		},
 	},
 	Region:                 "",
+	AssumeRoleARN:          "",
+	ExternalID:             "",
 	PollingIntervalSeconds: 300,
 	Quiet:                  false,
 	DryRun:                 false,
@@ -130,6 +145,32 @@ func (cfg *AppConfig) Build() error {
 			cfg.Log.Level = "debug"
 		default:
 			cfg.Log.Level = "info"
+		}
+	}
+
+	return cfg.buildAssumeRoles()
+}
+
+// buildAssumeRoles folds the single-role AssumeRoleARN into AssumeRoles and validates the result.
+// Exceeding MaxAssumeRoles is a startup error rather than a truncation: silently inventorying
+// only the first N roles would leave a customer's remaining accounts unreported with no signal.
+func (cfg *AppConfig) buildAssumeRoles() error {
+	if cfg.AssumeRoleARN != "" {
+		cfg.AssumeRoles = append(cfg.AssumeRoles, inventory.AssumeRole{
+			ARN:        cfg.AssumeRoleARN,
+			ExternalID: cfg.ExternalID,
+		})
+	}
+
+	if len(cfg.AssumeRoles) > inventory.MaxAssumeRoles {
+		return fmt.Errorf(
+			"%d roles configured but at most %d are supported (assume-roles, plus assume-role-arn if set)",
+			len(cfg.AssumeRoles), inventory.MaxAssumeRoles)
+	}
+
+	for i := range cfg.AssumeRoles {
+		if cfg.AssumeRoles[i].ARN == "" {
+			return fmt.Errorf("assume-roles[%d] has no arn", i)
 		}
 	}
 

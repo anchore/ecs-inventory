@@ -13,6 +13,11 @@ anchore:
 
 region: "us-east-1"
 
+assume-roles:
+  - arn: "arn:aws:iam::111111111111:role/anchore-ecs-inventory"
+    external-id: "test-external-id"
+  - arn: "arn:aws:iam::222222222222:role/anchore-ecs-inventory"
+
 polling-interval-seconds: 60
 
 quiet: true

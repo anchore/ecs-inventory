@@ -4,13 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/h2non/gock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/anchore/ecs-inventory/internal"
 	"github.com/anchore/ecs-inventory/internal/logger"
 	"github.com/anchore/ecs-inventory/pkg/connection"
 	"github.com/anchore/ecs-inventory/pkg/reporter"
@@ -18,6 +22,114 @@ import (
 
 func init() {
 	logger.Log = &logger.NoOpLogger{}
+}
+
+// stubCredentialsProvider stands in for whatever credentials LoadDefaultConfig resolved,
+// so the tests can tell "base credentials" from "assume-role credentials".
+type stubCredentialsProvider struct{}
+
+func (stubCredentialsProvider) Retrieve(_ context.Context) (aws.Credentials, error) {
+	return aws.Credentials{AccessKeyID: "base-credentials"}, nil
+}
+
+func TestWithAssumeRoleLeavesCredentialsAloneWhenARNEmpty(t *testing.T) {
+	cfg := aws.Config{Region: "us-east-1", Credentials: stubCredentialsProvider{}}
+
+	got := withAssumeRole(cfg, "", "some-external-id")
+
+	// An external ID on its own must not trigger an assume-role swap.
+	assert.IsType(t, stubCredentialsProvider{}, got.Credentials)
+}
+
+func TestWithAssumeRoleSwapsInAssumeRoleCredentials(t *testing.T) {
+	cfg := aws.Config{Region: "us-east-1", Credentials: stubCredentialsProvider{}}
+
+	got := withAssumeRole(cfg, "arn:aws:iam::222222222222:role/anchore-ecs-inventory", "")
+
+	assert.IsType(t, &aws.CredentialsCache{}, got.Credentials)
+	// the caller's config must not be mutated in place
+	assert.IsType(t, stubCredentialsProvider{}, cfg.Credentials)
+}
+
+func TestAssumeRoleOptions(t *testing.T) {
+	tests := []struct {
+		name              string
+		externalID        string
+		wantExternalIDSet bool
+		wantExternalIDVal string
+	}{
+		{name: "no external id", externalID: "", wantExternalIDSet: false},
+		{name: "external id supplied", externalID: "abc123", wantExternalIDSet: true, wantExternalIDVal: "abc123"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := stscreds.AssumeRoleOptions{}
+			assumeRoleOptions(tt.externalID)(&opts)
+
+			assert.Equal(t, internal.ApplicationName, opts.RoleSessionName)
+			if !tt.wantExternalIDSet {
+				assert.Nil(t, opts.ExternalID)
+				return
+			}
+			assert.NotNil(t, opts.ExternalID)
+			assert.Equal(t, tt.wantExternalIDVal, *opts.ExternalID)
+		})
+	}
+}
+
+func TestReportForEachRole(t *testing.T) {
+	roleA := AssumeRole{ARN: "arn:aws:iam::111111111111:role/anchore"}
+	roleB := AssumeRole{ARN: "arn:aws:iam::222222222222:role/anchore"}
+	roleC := AssumeRole{ARN: "arn:aws:iam::333333333333:role/anchore"}
+
+	t.Run("every role succeeds", func(t *testing.T) {
+		var visited []string
+		err := reportForEachRole([]AssumeRole{roleA, roleB, roleC}, func(r AssumeRole) error {
+			visited = append(visited, r.ARN)
+			return nil
+		})
+
+		assert.NoError(t, err)
+		assert.Equal(t, []string{roleA.ARN, roleB.ARN, roleC.ARN}, visited)
+	})
+
+	t.Run("a failing role does not stop the rest", func(t *testing.T) {
+		var visited []string
+		err := reportForEachRole([]AssumeRole{roleA, roleB, roleC}, func(r AssumeRole) error {
+			visited = append(visited, r.ARN)
+			if r.ARN == roleB.ARN {
+				return errors.New("access denied assuming role")
+			}
+			return nil
+		})
+
+		// the whole point: account C is still inventoried despite account B being broken
+		assert.Equal(t, []string{roleA.ARN, roleB.ARN, roleC.ARN}, visited)
+		assert.ErrorContains(t, err, roleB.ARN)
+		assert.ErrorContains(t, err, "access denied assuming role")
+		assert.NotContains(t, err.Error(), roleA.ARN)
+	})
+
+	t.Run("every failure is reported", func(t *testing.T) {
+		err := reportForEachRole([]AssumeRole{roleA, roleB}, func(_ AssumeRole) error {
+			return errors.New("boom")
+		})
+
+		assert.ErrorContains(t, err, roleA.ARN)
+		assert.ErrorContains(t, err, roleB.ARN)
+	})
+
+	t.Run("no roles is not an error", func(t *testing.T) {
+		called := false
+		err := reportForEachRole(nil, func(_ AssumeRole) error {
+			called = true
+			return nil
+		})
+
+		assert.NoError(t, err)
+		assert.False(t, called)
+	})
 }
 
 func TestGetInventoryReportForCluster(t *testing.T) {
