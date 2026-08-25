@@ -2,11 +2,13 @@ package inventory
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ecstypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/anchore/ecs-inventory/pkg/reporter"
 )
@@ -643,5 +645,89 @@ func Test_getContainerImageTag(t *testing.T) {
 			got := getContainerImageTag(tt.args.containerTagMap, &tt.args.container)
 			assert.Equal(t, tt.want, got)
 		})
+	}
+}
+
+func Test_listCallsFollowEveryPage(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("clusters", func(t *testing.T) {
+		client := &mockECSClient{
+			ClusterPages: [][]string{{"cluster-1", "cluster-2"}, {"cluster-3"}, {"cluster-4"}},
+		}
+		got, err := fetchClusters(ctx, client)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"cluster-1", "cluster-2", "cluster-3", "cluster-4"}, got)
+	})
+
+	t.Run("tasks", func(t *testing.T) {
+		client := &mockECSClient{
+			TaskPages: [][]string{{"task-1", "task-2"}, {"task-3"}},
+		}
+		got, err := fetchTasksFromCluster(ctx, client, "cluster-1")
+		require.NoError(t, err)
+		assert.Equal(t, []string{"task-1", "task-2", "task-3"}, got)
+	})
+
+	t.Run("services", func(t *testing.T) {
+		client := &mockECSClient{
+			ServicePages: [][]string{{"service-1"}, {"service-2"}, {"service-3"}},
+		}
+		got, err := fetchServicesFromCluster(ctx, client, "cluster-1")
+		require.NoError(t, err)
+		assert.Equal(t, []string{"service-1", "service-2", "service-3"}, got)
+	})
+}
+
+func Test_describeCallsStayWithinBatchLimits(t *testing.T) {
+	ctx := context.Background()
+
+	assertBatched := func(t *testing.T, batches [][]string, want []string, limit int) {
+		t.Helper()
+		var described []string
+		for _, batch := range batches {
+			assert.LessOrEqual(t, len(batch), limit)
+			described = append(described, batch...)
+		}
+		assert.Equal(t, want, described)
+	}
+
+	// The limits are spelled out here rather than reused from the constants the code batches
+	// with, so that a wrong constant fails the test instead of moving the goalposts.
+	t.Run("tasks", func(t *testing.T) {
+		client := &mockECSClient{}
+		tasks := syntheticTaskARNs(201)
+
+		_, err := fetchContainersFromTasks(ctx, client, "cluster-1", tasks)
+		require.NoError(t, err)
+		assertBatched(t, client.DescribeTasksBatches, tasks, 100)
+	})
+
+	t.Run("services", func(t *testing.T) {
+		client := &mockECSClient{}
+		services := make([]string, 21)
+		for i := range services {
+			services[i] = fmt.Sprintf("service-%d", i)
+		}
+
+		_, err := fetchServicesMetadata(ctx, client, "cluster-1", services)
+		require.NoError(t, err)
+		assertBatched(t, client.DescribeServicesBatches, services, 10)
+	})
+}
+
+// Image tags are resolved from a map built out of every described task. Building that map one
+// batch at a time would leave tasks in later batches with an UNKNOWN tag.
+func Test_fetchContainersFromTasks_resolvesImageTagsAcrossBatches(t *testing.T) {
+	client := &mockECSClient{}
+	tasks := syntheticTaskARNs(101)
+
+	containers, err := fetchContainersFromTasks(context.Background(), client, "cluster-1", tasks)
+	require.NoError(t, err)
+	require.Len(t, containers, len(tasks))
+	require.Greater(t, len(client.DescribeTasksBatches), 1, "needs more than one batch to be meaningful")
+
+	for _, container := range containers {
+		assert.Equal(t, "app:v1", container.ImageTag)
 	}
 }
