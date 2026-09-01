@@ -8,9 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 
+	"github.com/anchore/ecs-inventory/internal"
 	"github.com/anchore/ecs-inventory/internal/logger"
 	"github.com/anchore/ecs-inventory/internal/tracker"
 	"github.com/anchore/ecs-inventory/pkg/connection"
@@ -33,6 +37,7 @@ func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo,
 	case dryRun:
 		logger.Log.Info("Dry run specified, not reporting inventory")
 	case anchoreDetails.IsValid():
+		logger.Log.Info("Reporting results to Anchore")
 		if err := reporter.Post(report, anchoreDetails); err != nil {
 			return fmt.Errorf("unable to report Inventory to Anchore: %w", err)
 		}
@@ -46,28 +51,80 @@ func HandleReport(report reporter.Report, anchoreDetails connection.AnchoreInfo,
 	return nil
 }
 
-// GetInventoryReportsForRegion collects inventory reports for a specified region.
-func GetInventoryReportsForRegion(region string, anchoreDetails connection.AnchoreInfo, quiet, dryRun bool) error {
-	ctx := context.Background()
-	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Getting Inventory Reports for region: %s", region))
-	logger.Log.Info("Getting Inventory Reports for region", "region", region)
-
-	// Load AWS config
+// BuildAWSConfig loads the AWS config for a region and, when assumeRoleARN is set, swaps in an STS
+// assume-role credentials cache. The credentials cache resolves credentials lazily and refreshes
+// them automatically as they expire. Build it once and reuse the returned config across poll cycles
+// so that refresh actually happens over the daemon's lifetime instead of issuing a fresh AssumeRole
+// every cycle. The role may live in the same or a different AWS account.
+func BuildAWSConfig(ctx context.Context, region, assumeRoleARN, externalID string) (aws.Config, error) {
 	opts := []func(*config.LoadOptions) error{}
 	if region != "" {
 		opts = append(opts, config.WithRegion(region))
 	}
 	cfg, err := config.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
-		logger.Log.Error("Failed to load AWS config", err)
-		return fmt.Errorf("failed to load aws config: %w", err)
+		return aws.Config{}, fmt.Errorf("failed to load aws config: %w", err)
 	}
 
-	err = checkAWSCredentials(ctx, cfg)
-	if err != nil {
-		return err
+	cfg, assumed := configureAssumeRole(cfg, assumeRoleARN, externalID)
+	if assumed {
+		logger.Log.Info("Assuming IAM role for ECS inventory", "roleArn", assumeRoleARN)
 	}
+	return cfg, nil
+}
 
+// configureAssumeRole replaces cfg's credentials with an STS assume-role credentials cache when
+// assumeRoleARN is set, reporting whether it did. When assumeRoleARN is empty cfg is returned
+// unchanged so the agent's ambient credentials are used.
+func configureAssumeRole(cfg aws.Config, assumeRoleARN, externalID string) (aws.Config, bool) {
+	if assumeRoleARN == "" {
+		return cfg, false
+	}
+	stsClient := sts.NewFromConfig(cfg)
+	provider := stscreds.NewAssumeRoleProvider(stsClient, assumeRoleARN, assumeRoleOptionsFor(externalID))
+	cfg.Credentials = aws.NewCredentialsCache(provider)
+	return cfg, true
+}
+
+// assumeRoleOptionsFor returns a function that configures an STS AssumeRoleProvider with the app's
+// session name and, when non-empty, the given external ID (required by some cross-account trust
+// policies).
+func assumeRoleOptionsFor(externalID string) func(*stscreds.AssumeRoleOptions) {
+	return func(o *stscreds.AssumeRoleOptions) {
+		o.RoleSessionName = internal.ApplicationName
+		if externalID != "" {
+			o.ExternalID = aws.String(externalID)
+		}
+	}
+}
+
+// AppendAssumedRole adds an "assumedRole" key/value to structured log attributes when the pass is
+// assuming a role, so log lines make clear which role (and therefore which account) the work is
+// happening under. When assumeRoleARN is empty the agent is using its own ambient credentials and
+// nothing is added. It is the single source of truth for this attribute across packages (the poll
+// loop's passLogAttrs delegates to it).
+func AppendAssumedRole(attrs []interface{}, assumeRoleARN string) []interface{} {
+	if assumeRoleARN != "" {
+		attrs = append(attrs, "assumedRole", assumeRoleARN)
+	}
+	return attrs
+}
+
+// GetInventoryReportsForRegion collects inventory reports using the supplied AWS config, which the
+// caller builds once (via BuildAWSConfig) and reuses across poll cycles. assumeRoleARN is the role
+// this pass assumes (empty when using the agent's own credentials) and is included in log lines so
+// the region and role a report came from are unambiguous. The region is read from cfg.Region -- the
+// region the AWS SDK actually resolved and will query -- so log/tracker text can never disagree with
+// where the calls really went (e.g. when the region came from AWS_REGION or instance metadata).
+func GetInventoryReportsForRegion(cfg aws.Config, assumeRoleARN string, anchoreDetails connection.AnchoreInfo, quiet, dryRun bool) error {
+	ctx := context.Background()
+	region := cfg.Region
+	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Getting Inventory Reports for region: %s", region))
+	logger.Log.Info("Getting Inventory Reports for region", AppendAssumedRole([]interface{}{"region", region}, assumeRoleARN)...)
+
+	// Credentials are validated once at startup (see pkg.preparePasses); any credential problem that
+	// develops afterward surfaces through the ECS API calls below and is logged/retried per cycle, so
+	// we don't re-check them here.
 	ecsClient := ecs.NewFromConfig(cfg)
 
 	clusters, err := fetchClusters(ctx, ecsClient)
@@ -84,7 +141,7 @@ func GetInventoryReportsForRegion(region string, anchoreDetails connection.Ancho
 			defer wg.Done()
 
 			// You can reuse ecsClient; keeping same behavior as before
-			report, err := GetInventoryReportForCluster(ctx, cluster, ecsClient)
+			report, err := GetInventoryReportForCluster(ctx, cluster, ecsClient, assumeRoleARN)
 			if err != nil {
 				logger.Log.Error("Failed to get inventory report for cluster", err)
 			}
@@ -177,8 +234,10 @@ func ensureReferencedObjectsExist(report reporter.Report) reporter.Report {
 	return updatedReport
 }
 
-// GetInventoryReportForCluster is an atomic method for getting in-use image results, for a cluster
-func GetInventoryReportForCluster(ctx context.Context, clusterARN string, ecsClient ECSAPI) (reporter.Report, error) {
+// GetInventoryReportForCluster is an atomic method for getting in-use image results, for a cluster.
+// assumeRoleARN (empty when using the agent's own credentials) is included in result log lines so
+// it is clear which assumed role surfaced the cluster's containers.
+func GetInventoryReportForCluster(ctx context.Context, clusterARN string, ecsClient ECSAPI, assumeRoleARN string) (reporter.Report, error) {
 	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Getting Inventory Report for cluster: %s", clusterARN))
 	logger.Log.Debug("Found cluster", "cluster", clusterARN)
 
@@ -223,7 +282,8 @@ func GetInventoryReportForCluster(ctx context.Context, clusterARN string, ecsCli
 			return reporter.Report{}, err
 		}
 		report.Containers = containers
-		logger.Log.Info("Found containers in cluster", "cluster", clusterARN, "containerCount", len(containers))
+		logger.Log.Info("Found containers in cluster",
+			AppendAssumedRole([]interface{}{"cluster", clusterARN, "containerCount", len(containers)}, assumeRoleARN)...)
 	}
 
 	return ensureReferencedObjectsExist(report), nil

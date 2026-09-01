@@ -102,6 +102,11 @@ unit: ## Run unit tests (with coverage)
 	@echo "Coverage: $$(cat $(COVER_TOTAL))"
 	@if [ $$(echo "$$(cat $(COVER_TOTAL)) >= $(COVERAGE_THRESHOLD)" | bc -l) -ne 1 ]; then echo "$(RED)$(BOLD)Failed coverage quality gate (> $(COVERAGE_THRESHOLD)%)$(RESET)" && false; fi
 
+.PHONY: integration
+integration: ## Run integration tests against a local moto (ECS+STS) container (requires docker)
+	$(call title,Running integration tests)
+	./test/integration/run.sh
+
 .PHONY: snapshot
 snapshot: ## Build a snapshot binaries and docker images
 	$(call title,Building snapshot binary)

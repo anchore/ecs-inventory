@@ -53,6 +53,120 @@ in the following order:
    aws_secret_access_key = <YOUR_SECRET_ACCESS_KEY>
    ```
 
+When running as a daemon in ECS, the recommended approach is to attach an IAM
+task role to the task definition rather than supplying static credentials.
+
+#### Required IAM permissions
+
+The identity that queries ECS (the task role, the static credentials, or the
+assumed role described below) needs read/list access to ECS. The following
+policy grants exactly the API actions `anchore-ecs-inventory` calls:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AnchoreEcsInventoryRead",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:ListClusters",
+        "ecs:ListServices",
+        "ecs:ListTasks",
+        "ecs:DescribeServices",
+        "ecs:DescribeTasks",
+        "ecs:ListTagsForResource"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+#### Assuming a role (including cross-account)
+
+Anchore ECS Inventory can assume one or more IAM roles before querying ECS. This
+is useful for collecting inventory from accounts other than the one the daemon
+runs in, and for local testing. Roles are configured as a list under
+`assume-role`; each entry produces an independent inventory pass, so a single
+agent can cover multiple account-regions:
+
+```yaml
+assume-role:
+  - role-arn: arn:aws:iam::123456789012:role/anchore-ecs-inventory
+    # region to inventory using the assumed credentials (required for each entry)
+    region: us-east-1
+    # optional - only needed if the target role's trust policy requires an external ID
+    external-id: ""
+  # add more entries to inventory additional account-regions from the same agent
+  - role-arn: arn:aws:iam::999999999999:role/anchore-ecs-inventory
+    region: eu-west-1
+```
+
+When `assume-role` is empty (the default), the agent inventories its own account
+using the top-level `region`. When one or more roles are configured, the
+top-level `region` (including `--region` and `ANCHORE_ECS_INVENTORY_REGION`) is
+ignored — the agent logs a warning if one was set — and each entry must specify
+its own `region`. The assumed credentials are refreshed automatically as they
+expire, so this works for the long-running daemon.
+
+> **Note:** the `assume-role` list can only be set via a config file - it cannot
+> be populated from environment variables. Setting `ANCHORE_ECS_INVENTORY_ASSUME_ROLE`
+> is rejected at startup with an explicit error. The top-level `region` (for the
+> no-role case) can still be set with `ANCHORE_ECS_INVENTORY_REGION` or `--region`.
+
+**Credential rotation:** assume-role credentials refresh automatically as they
+expire. Rotating the *static* base credentials that feed the assume-role STS calls
+requires restarting the agent to be picked up. In the no-role case the agent
+rebuilds its AWS config each cycle, so a rotated static credentials file is picked
+up on the next poll without a restart.
+
+Assuming a role requires permissions on both sides of the trust relationship:
+
+1. **The base identity** (the ECS task role or static credentials the daemon
+   starts with) must be allowed to assume the target role:
+
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Sid": "AnchoreEcsInventoryAssumeRole",
+         "Effect": "Allow",
+         "Action": "sts:AssumeRole",
+         "Resource": "arn:aws:iam::123456789012:role/anchore-ecs-inventory"
+       }
+     ]
+   }
+   ```
+
+2. **The target role** must (a) grant the [ECS read permissions](#required-iam-permissions)
+   above, and (b) have a trust policy allowing the base identity to assume it.
+   For a cross-account role, the trust policy names the base account/role as the
+   principal. Add the `sts:ExternalId` condition only if you set `external-id`:
+
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Principal": {
+           "AWS": "arn:aws:iam::111111111111:role/anchore-ecs-inventory-task-role"
+         },
+         "Action": "sts:AssumeRole",
+         "Condition": {
+           "StringEquals": { "sts:ExternalId": "your-external-id" }
+         }
+       }
+     ]
+   }
+   ```
+
+   Here `111111111111` is the account the daemon runs in and `123456789012`
+   (from an entry's `role-arn`) is the account being inventoried. For a
+   same-account role the principal simply references a role in the same account.
+
 ### Anchore ECS Inventory Configuration
 
 Anchore ECS Inventory can be configured with a configuration file. The default
@@ -76,7 +190,7 @@ anchore:
   user: $ANCHORE_ECS_INVENTORY_ANCHORE_USER
 
   # anchore enterprise password
-  password: ANCHORE_ECS_INVENTORY_ANCHORE_PASSWORD
+  password: $ANCHORE_ECS_INVENTORY_ANCHORE_PASSWORD
 
   # anchore enterprise account that the inventory will be sent
   account: $ANCHORE_ECS_INVENTORY_ANCHORE_ACCOUNT
@@ -85,8 +199,16 @@ anchore:
     insecure: true
     timeout-seconds: 10
 
-# the aws region
+# the aws region to inventory using the agent's own credentials. Used only when no
+# assume-role entries are configured below. May be empty, in which case the AWS SDK
+# resolves the region (e.g. from AWS_REGION or instance metadata).
 region: $ANCHORE_ECS_INVENTORY_REGION
+
+# optional - roles to assume (via STS) before querying ECS. Zero entries (the default)
+# inventories the agent's own account using the region above. Each entry produces an
+# independent inventory pass, so a single agent can cover multiple account-regions.
+# See the "Assuming a role" section above for details. Config-file only (not env vars).
+assume-role: []
 
 # frequency of which to poll the region
 polling-interval-seconds: 300

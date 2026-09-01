@@ -1,0 +1,16 @@
+anchore:
+  url: http://localhost:8228
+  user: admin
+  password: foobar
+  account: admin
+
+region: ""
+
+assume-role:
+  - role-arn: arn:aws:iam::111111111111:role/a
+    region: us-west-2
+    external-id: ext-a
+  - role-arn: arn:aws:iam::222222222222:role/b
+    region: eu-west-1
+
+polling-interval-seconds: 60

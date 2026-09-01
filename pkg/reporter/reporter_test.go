@@ -8,8 +8,41 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/anchore/ecs-inventory/internal/logger"
 	"github.com/anchore/ecs-inventory/pkg/connection"
 )
+
+// recordingInfoLogger captures Info messages so tests can assert on what Post logged.
+type recordingInfoLogger struct {
+	logger.NoOpLogger
+	infos []string
+}
+
+func (r *recordingInfoLogger) Info(msg string, args ...interface{}) { r.infos = append(r.infos, msg) }
+
+// TestPostDoesNotAnnounceReporting guards the startup-log accuracy fix from the reporter side: the
+// "Reporting results to Anchore" line belongs to the caller (HandleReport), not Post. Keeping Post
+// quiet is what stops the startup credential-validation dummy post from claiming it reported. Fails
+// if the log line is moved back into Post.
+func TestPostDoesNotAnnounceReporting(t *testing.T) {
+	rec := &recordingInfoLogger{}
+	old := logger.Log
+	logger.Log = rec
+	defer func() { logger.Log = old }()
+
+	defer gock.Off()
+	gock.New("https://ancho.re").Post("v2/ecs-inventory").Reply(201).JSON(map[string]interface{}{})
+
+	err := Post(Report{}, connection.AnchoreInfo{
+		URL:      "https://ancho.re",
+		User:     "admin",
+		Password: "foobar",
+		Account:  "test",
+		HTTP:     connection.HTTPConfig{TimeoutSeconds: 10, Insecure: true},
+	})
+	require.NoError(t, err)
+	assert.NotContains(t, rec.infos, "Reporting results to Anchore", "Post must not announce reporting")
+}
 
 func TestPost(t *testing.T) {
 	defer gock.Off()

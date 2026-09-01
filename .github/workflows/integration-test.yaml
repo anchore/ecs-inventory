@@ -1,0 +1,46 @@
+name: "Integration tests"
+on:
+  workflow_dispatch:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  Integration-Tests:
+    strategy:
+      matrix:
+        # test the lower bounds of support, and the latest available
+        go-version: ["1.26.3"]
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e #v7.0.0
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Restore bootstrap cache
+        id: bootstrap-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ${{ github.workspace }}/.tmp
+          key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}-${{ hashFiles('Makefile') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}-
+            ${{ runner.os }}-go-${{ matrix.go-version }}-
+
+      - name: Bootstrap project dependencies
+        if: steps.bootstrap-cache.outputs.cache-hit != 'true'
+        run: make bootstrap
+
+      # Runs the integration tests (build tag: integration) against a local moto server that
+      # emulates STS + ECS. Docker is preinstalled on the GitHub-hosted ubuntu runner, and
+      # test/integration/run.sh starts/stops the pinned moto container itself.
+      - name: Run integration tests
+        run: make integration
