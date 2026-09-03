@@ -4,11 +4,11 @@ go 1.26.3
 
 require (
 	github.com/adrg/xdg v0.5.3
-	github.com/aws/aws-sdk-go-v2 v1.44.0
+	github.com/aws/aws-sdk-go-v2 v1.45.0
 	github.com/aws/aws-sdk-go-v2/config v1.32.40
-	github.com/aws/aws-sdk-go-v2/credentials v1.19.39
+	github.com/aws/aws-sdk-go-v2/credentials v1.20.0
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.91.0
-	github.com/aws/aws-sdk-go-v2/service/sts v1.46.0
+	github.com/aws/aws-sdk-go-v2/service/sts v1.47.0
 	github.com/h2non/gock v1.2.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/spf13/cobra v1.10.2
@@ -19,15 +19,15 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.40 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.40 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.40 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.41 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.19.0 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.0 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.0 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.19 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.40 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.6.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.34.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.39.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.7.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.35.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.40.0 // indirect
 	github.com/aws/smithy-go v1.28.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
