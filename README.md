@@ -1,5 +1,5 @@
-# Anchore ECS Inventory
-
+# Anchore ECS Inventory 
+ 
 > **Note: this integration requires a valid license or subscription entitlement
 > from Anchore**
 
