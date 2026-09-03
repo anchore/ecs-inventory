@@ -24,7 +24,6 @@ const v2ReportAPIPath = "v2/ecs-inventory"
 var apiPath = v2ReportAPIPath
 
 func Post(report Report, anchoreDetails connection.AnchoreInfo) error {
-	logger.Log.Info("Reporting results to Anchore")
 	defer tracker.TrackFunctionTime(time.Now(), fmt.Sprintf("Posting Inventory Report for cluster %s", report.ClusterARN))
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: anchoreDetails.HTTP.Insecure},

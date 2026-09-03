@@ -28,18 +28,6 @@ const (
 // default to 100. 100 is the maximum for all of them.
 const listPageSize = 100
 
-// Check if AWS credentials are present in the loaded config
-func checkAWSCredentials(ctx context.Context, cfg aws.Config) error {
-	_, err := cfg.Credentials.Retrieve(ctx)
-	if err != nil {
-		fmt.Println(
-			"Unable to get AWS credentials, please check ~/.aws/credentials file or environment variables are set correctly.",
-		)
-		return fmt.Errorf("unable to get AWS credentials: %w", err)
-	}
-	return nil
-}
-
 func fetchClusters(ctx context.Context, client ECSAPI) ([]string, error) {
 	defer tracker.TrackFunctionTime(time.Now(), "Fetching list of clusters")
 

@@ -14,8 +14,6 @@ import (
 	"github.com/anchore/ecs-inventory/pkg/reporter"
 )
 
-var ErrMissingDefaultConfigValue = fmt.Errorf("missing default config value")
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "anchore-ecs-inventory",
@@ -33,14 +31,9 @@ var rootCmd = &cobra.Command{
 		}
 		log.Info("Starting anchore-ecs-inventory")
 
-		// Check required config values are present
-		if appConfig.Region == "" {
-			log.Error(
-				"AWS region not specified, please set the ANCHORE_ECS_INVENTORY_REGION environment variable, use the --region flag, or specify a region in the config file",
-				ErrMissingDefaultConfigValue,
-			)
-			os.Exit(1)
-		}
+		// Region validation happens per-pass at startup inside PeriodicallyGetInventoryReport: a pass
+		// with no resolvable region (config, --region, env, or instance metadata) fails fast there
+		// rather than silently reporting nothing every cycle.
 
 		// Validate anchore connection & credentials, using a dummy report to post but this will be
 		// replaced in the future with a health check endpoint for the agents
@@ -59,13 +52,20 @@ var rootCmd = &cobra.Command{
 			log.Warn("Anchore details not specified, will not report inventory")
 		}
 
-		pkg.PeriodicallyGetInventoryReport(
+		// PeriodicallyGetInventoryReport only returns if startup validation fails; a healthy agent
+		// blocks here forever. Exit non-zero on startup-validation failure so ECS surfaces the
+		// misconfiguration (e.g. via task restarts/alarms) instead of running blind.
+		if err := pkg.PeriodicallyGetInventoryReport(
 			appConfig.PollingIntervalSeconds,
 			appConfig.AnchoreDetails,
 			appConfig.Region,
+			appConfig.AssumeRole,
 			appConfig.Quiet,
 			appConfig.DryRun,
-		)
+		); err != nil {
+			log.Error("Shutting down: startup validation failed", err)
+			os.Exit(1)
+		}
 	},
 }
 
@@ -80,7 +80,7 @@ func init() {
 
 	opt = "region"
 	rootCmd.Flags().
-		StringP(opt, "r", config.DefaultConfigValues.Region, "if set overrides the AWS_REGION environment variable/region specified in anchore-ecs-inventory config")
+		StringP(opt, "r", config.DefaultConfigValues.Region, "AWS region to inventory using the agent's own credentials (overrides AWS_REGION and the config file's region); ignored when assume-role entries are configured, which use each entry's own region")
 	if err := viper.BindPFlag(opt, rootCmd.Flags().Lookup(opt)); err != nil {
 		fmt.Printf("unable to bind flag '%s': %+v", opt, err)
 		os.Exit(1)

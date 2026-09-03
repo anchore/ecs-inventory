@@ -13,7 +13,7 @@ anchore:
   user: $ANCHORE_ECS_INVENTORY_ANCHORE_USER
 
   # anchore enterprise password
-  password: ANCHORE_ECS_INVENTORY_ANCHORE_PASSWORD
+  password: $ANCHORE_ECS_INVENTORY_ANCHORE_PASSWORD
 
   # anchore enterprise account that the inventory will be sent
   account: $ANCHORE_ECS_INVENTORY_ANCHORE_ACCOUNT
@@ -22,8 +22,25 @@ anchore:
     insecure: true
     timeout-seconds: 10
 
-# the aws region
+# the aws region to inventory using the agent's own credentials. Used only when no
+# assume-role entries are configured below. May be empty, in which case the AWS SDK
+# resolves the region (e.g. from AWS_REGION or instance metadata).
 region: $ANCHORE_ECS_INVENTORY_REGION
+
+# optional - roles to assume (via STS) before querying ECS. Zero entries (the default)
+# inventories the agent's own account using the region above. Each entry produces an
+# independent inventory pass, so a single agent can cover multiple account-regions. A
+# role may be in the same or a different AWS account, provided its trust policy allows
+# the agent's credentials to assume it. This list can only be set via a config file
+# (it cannot be populated from environment variables).
+#
+# assume-role:
+#   - role-arn: arn:aws:iam::123456789012:role/anchore-ecs-inventory
+#     # region to inventory using the assumed credentials
+#     region: us-east-1
+#     # optional - external ID, only if the role's trust policy requires it
+#     external-id: ""
+assume-role: []
 
 # frequency of which to poll the region
 polling-interval-seconds: 300

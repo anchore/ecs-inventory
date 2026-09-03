@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLoggerInit(t *testing.T) {
@@ -32,6 +33,24 @@ func TestLogsToFileIfFileLocationProvided(t *testing.T) {
 	}
 
 	assert.Contains(t, string(b), expectedLogMsg)
+}
+
+// TestInitZapLoggerPanicsWhenLogFileNotWritable documents the CURRENT behavior: InitZapLogger uses
+// zap.Must, so if the configured log file cannot be opened (e.g. no write permission on its
+// directory) it panics rather than returning an error. This is a characterization test that locks
+// the behavior; it is not an endorsement -- graceful handling would be an improvement, but changing
+// it is intentionally out of scope here.
+func TestInitZapLoggerPanicsWhenLogFileNotWritable(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root bypasses file permissions")
+	}
+	dir := t.TempDir()
+	require.NoError(t, os.Chmod(dir, 0o500)) // r-x: cannot create files in it
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+
+	assert.Panics(t, func() {
+		InitZapLogger(LogConfig{Level: "info", FileLocation: path.Join(dir, "app.log")})
+	})
 }
 
 func TestLoggerDefaultsToInfoLevelOnInvalidLevel(t *testing.T) {
