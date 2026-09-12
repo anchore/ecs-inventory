@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 env:
-  GO_VERSION: "1.26.3"
+  GO_VERSION: "1.26.8"
 
 jobs:
   wait-for-checks:
@@ -45,7 +45,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # This check name is defined as the github actions job name (in .github/workflows/static-analysis.yaml)
-          checkName: "Static-Analysis (1.26.3, ubuntu-latest)"
+          checkName: "Static-Analysis (1.26.8, ubuntu-latest)"
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Check unit test results
@@ -54,7 +54,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # This check name is defined as the github actions job name (in .github/workflows/unit-test.yaml)
-          checkName: "Unit-Tests (1.26.3, ubuntu-latest)"
+          checkName: "Unit-Tests (1.26.8, ubuntu-latest)"
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Quality gate
@@ -114,10 +114,37 @@ jobs:
           DOCKER_USER: ${{ secrets.ANCHOREINTEGRATIONSWRITE_DH_USERNAME }}
           DOCKER_PASS: ${{ secrets.ANCHOREINTEGRATIONSWRITE_DH_PAT }}
 
+      # goreleaser picks the tag for a commit by reverse-lexicographic refname order, so a
+      # bare vX.Y.Z tag always loses to a vX.Y.Z-rcN tag on the same commit. That would
+      # silently rebuild and republish the RC instead of the final release. The workflow
+      # already knows which tag it was triggered by, so pass it explicitly rather than
+      # letting goreleaser guess.
+      #
+      # For a final release we also pin the changelog's starting point to the previous final
+      # release. Left to itself goreleaser would start from the most recent RC, so the notes
+      # would only cover commits landed after the last RC instead of the whole release.
+      - name: Determine release tags
+        id: release-tags
+        run: |
+          echo "current=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          if [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            previous=$(git tag -l 'v*' --sort=-v:refname \
+              | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+              | grep -vx "${GITHUB_REF_NAME}" \
+              | head -1)
+            echo "Final release ${GITHUB_REF_NAME}; changelog starts from ${previous:-<none>}"
+            echo "previous=${previous}" >> "$GITHUB_OUTPUT"
+          else
+            echo "Prerelease ${GITHUB_REF_NAME}; leaving changelog range to goreleaser"
+          fi
+
       - name: Build snapshot artifacts
         run: make release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_CURRENT_TAG: ${{ steps.release-tags.outputs.current }}
+          # Empty is safe: goreleaser falls back to auto-detection.
+          GORELEASER_PREVIOUS_TAG: ${{ steps.release-tags.outputs.previous }}
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
         with:
