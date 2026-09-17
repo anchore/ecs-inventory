@@ -147,3 +147,18 @@ jobs:
         with:
           name: artifacts
           path: dist/**/*
+
+  # RC only: once the RC image is built + published above, kick off the
+  # downstream CircleCI e2e pipeline. GA tags skip this (a GA is only cut after
+  # e2e passes). Called as a reusable workflow off the App-token tag push, so it
+  # isn't suppressed the way a GITHUB_TOKEN release-event reaction would be.
+  # promote=true → a passing e2e drives the GA. secrets: inherit lets the called
+  # job resolve the e2e-environment CircleCI secrets.
+  trigger-e2e:
+    needs: [release]
+    if: ${{ contains(github.ref_name, '-rc') }}
+    uses: ./.github/workflows/trigger-circleci-e2e.yaml
+    with:
+      tag: ${{ github.ref_name }}
+      promote: true
+    secrets: inherit # zizmor: ignore[secrets-inherit] required to reach the e2e env secrets from the reusable workflow
