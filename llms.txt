@@ -1,0 +1,42 @@
+# Anchore ECS Inventory
+
+This project is a command-line tool that gathers an inventory of container images running in Amazon Elastic Container Service (ECS) and reports them to Anchore Enterprise for security scanning and compliance.
+
+## Project Overview
+
+- **Language**: Go 1.24
+- **Purpose**: Poll ECS APIs to inventory container images currently in use
+- **Integration**: Requires valid Anchore license/subscription
+- **Deployment**: Can run as standalone CLI or containerized service
+
+## Key Components
+
+- `main.go`: Entry point and CLI interface using Cobra
+- `cmd/`: Command definitions and CLI logic
+- `pkg/inventory/`: Core ECS inventory collection logic
+- `pkg/reporter/`: Anchore Enterprise reporting functionality
+- `internal/config/`: Configuration management with Viper
+- `internal/logger/`: Structured logging with Zap
+
+## Configuration
+
+Uses YAML configuration file (default: `~/.anchore-ecs-inventory.yaml`) with:
+- AWS credentials and region settings
+- Anchore Enterprise API endpoints and authentication
+- Polling intervals and logging preferences
+- Environment variable overrides with `ANCHORE_ECS_INVENTORY_` prefix
+
+## Key Features
+
+- Polls ECS clusters for running container images
+- Configurable polling intervals (default: 300 seconds)
+- Reports inventory to Anchore Enterprise for vulnerability scanning
+- Supports dry-run mode for testing
+- Docker Compose deployment option available
+
+## Dependencies
+
+- AWS SDK for Go for ECS API interaction
+- Cobra for CLI framework
+- Viper for configuration management
+- Zap for structured logging
