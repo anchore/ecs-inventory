@@ -20,14 +20,19 @@ jobs:
         with:
           persist-credentials: false
 
-      # we don't want to release commits that have been pushed and tagged, but not necessarily merged onto main
+      # we don't want to release commits that have been pushed and tagged, but not necessarily merged onto main.
+      # Alpha tags (vX.Y.Z-alpha.N) are the exception: they may be cut from any branch to test unmerged work.
       - name: Ensure tagged commit is on main
+        if: ${{ !contains(github.ref_name, '-alpha') }}
         run: |
           echo "Tag: ${GITHUB_REF##*/}"
           git fetch origin main
           git merge-base --is-ancestor ${GITHUB_REF##*/} origin/main && echo "${GITHUB_REF##*/} is a commit on main!"
 
+      # Snapshot only runs on pushes to main (snapshot.yaml), so a branch commit never gets
+      # this check; waiting for it on an alpha tag would just time out.
       - name: Build snapshot artifacts
+        if: ${{ !contains(github.ref_name, '-alpha') }}
         uses: fountainhead/action-wait-for-check@5a908a24814494009c4bb27c242ea38c93c593be #v1.2.0
         id: snapshot
         with:
@@ -55,7 +60,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Quality gate
-        if: steps.static-analysis.outputs.conclusion != 'success' || steps.tests-unit.outputs.conclusion != 'success' || steps.snapshot.outputs.conclusion != 'success'
+        if: steps.static-analysis.outputs.conclusion != 'success' || steps.tests-unit.outputs.conclusion != 'success' || (!contains(github.ref_name, '-alpha') && steps.snapshot.outputs.conclusion != 'success')
         run: |
           echo "Static-Analysis Status : ${STEPS_STATIC_ANALYSIS_OUTPUTS_CONCLUSION}"
           echo "Unit Test Status : ${STEPS_TESTS_UNIT_OUTPUTS_CONCLUSION}"
