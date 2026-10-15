@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.47.2
 	github.com/aws/aws-sdk-go-v2/config v1.33.8
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.8
-	github.com/aws/aws-sdk-go-v2/service/ecs v1.100.1
+	github.com/aws/aws-sdk-go-v2/service/ecs v1.100.2
 	github.com/aws/aws-sdk-go-v2/service/sts v1.51.3
 	github.com/h2non/gock v1.2.0
 	github.com/mitchellh/go-homedir v1.1.0
